@@ -1,22 +1,23 @@
-import {isNullOrUndef, valueOrDefault} from '../helpers/helpers.core';
-import {_factorize} from '../helpers/helpers.math';
+import {isNullOrUndef, valueOrDefault} from '../helpers/helpers.core.js';
+import {_factorize} from '../helpers/helpers.math.js';
 
 
 /**
- * @typedef { import("./core.controller").default } Chart
+ * @typedef { import('./core.controller.js').default } Chart
  * @typedef {{value:number | string, label?:string, major?:boolean, $context?:any}} Tick
  */
 
 /**
  * Returns a subset of ticks to be plotted to avoid overlapping labels.
- * @param {import('./core.scale').default} scale
+ * @param {import('./core.scale.js').default} scale
  * @param {Tick[]} ticks
  * @return {Tick[]}
  * @private
  */
 export function autoSkip(scale, ticks) {
   const tickOpts = scale.options.ticks;
-  const ticksLimit = tickOpts.maxTicksLimit || determineMaxTicks(scale);
+  const determinedMaxTicks = determineMaxTicks(scale);
+  const ticksLimit = Math.min(tickOpts.maxTicksLimit || determinedMaxTicks, determinedMaxTicks);
   const majorIndices = tickOpts.major.enabled ? getMajorIndices(ticks) : [];
   const numMajorIndices = majorIndices.length;
   const first = majorIndices[0];

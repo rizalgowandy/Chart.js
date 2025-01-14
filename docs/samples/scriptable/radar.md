@@ -92,3 +92,8 @@ module.exports = {
   config,
 };
 ```
+
+## Docs
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)
+* [Radar](../../charts/radar.md)

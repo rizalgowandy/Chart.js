@@ -89,3 +89,7 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Polar Area Chart](../../charts/polar.md)
+* [Radial linear scale](../../axes/radial/linear.md)

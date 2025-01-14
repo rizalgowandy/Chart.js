@@ -1,6 +1,6 @@
-import {isArray} from '../helpers/helpers.core';
-import {formatNumber} from '../helpers/helpers.intl';
-import {log10} from '../helpers/helpers.math';
+import {isArray} from '../helpers/helpers.core.js';
+import {formatNumber} from '../helpers/helpers.intl.js';
+import {log10} from '../helpers/helpers.math.js';
 
 /**
  * Namespace to hold formatters for different types of ticks
@@ -14,7 +14,7 @@ const formatters = {
    * @return {string|string[]} the label to display
    */
   values(value) {
-    return isArray(value) ? value : '' + value;
+    return isArray(value) ? /** @type {string[]} */ (value) : '' + value;
   },
 
   /**
@@ -45,7 +45,13 @@ const formatters = {
     }
 
     const logDelta = log10(Math.abs(delta));
-    const numDecimal = Math.max(Math.min(-1 * Math.floor(logDelta), 20), 0); // toFixed has a max of 20 decimal places
+
+    // When datasets have values approaching Number.MAX_VALUE, the tick calculations might result in
+    // infinity and eventually NaN. Passing NaN for minimumFractionDigits or maximumFractionDigits
+    // will make the number formatter throw. So instead we check for isNaN and use a fallback value.
+    //
+    // toFixed has a max of 20 decimal places
+    const numDecimal = isNaN(logDelta) ? 1 : Math.max(Math.min(-1 * Math.floor(logDelta), 20), 0);
 
     const options = {notation, minimumFractionDigits: numDecimal, maximumFractionDigits: numDecimal};
     Object.assign(options, this.options.ticks.format);
@@ -66,8 +72,8 @@ const formatters = {
     if (tickValue === 0) {
       return '0';
     }
-    const remain = tickValue / (Math.pow(10, Math.floor(log10(tickValue))));
-    if (remain === 1 || remain === 2 || remain === 5) {
+    const remain = ticks[index].significand || (tickValue / (Math.pow(10, Math.floor(log10(tickValue)))));
+    if ([1, 2, 3, 5, 10, 15].includes(remain) || index > 0.8 * ticks.length) {
       return formatters.numeric.call(this, tickValue, index, ticks);
     }
     return '';

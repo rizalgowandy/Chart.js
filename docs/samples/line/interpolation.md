@@ -75,3 +75,9 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs 
+* [Line](../../charts/line.md)
+  * [`cubicInterpolationMode`](../../charts/line.md#cubicinterpolationmode)
+  * [Line Styling (`tension`)](../../charts/line.md#line-styling)
+

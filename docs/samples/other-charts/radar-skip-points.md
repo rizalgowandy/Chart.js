@@ -85,3 +85,7 @@ module.exports = {
 };
 ```
 
+## Docs
+* [Radar](../../charts/radar.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Radial linear scale](../../axes/radial/linear.md)

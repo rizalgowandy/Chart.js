@@ -107,3 +107,8 @@ module.exports = {
   config,
 };
 ```
+
+## Docs
+* [Bubble](../../charts/bubble.md)
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)

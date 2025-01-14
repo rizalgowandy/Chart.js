@@ -1,5 +1,7 @@
 # Stacked Bar Chart with Groups
 
+Using the `stack` property to divide datasets into multiple stacks.
+
 ```js chart-editor
 // <block:actions:2>
 const actions = [
@@ -77,3 +79,10 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Bar](../../charts/bar.md)
+  * [Stacked Bar Chart](../../charts/bar.md#stacked-bar-chart)
+* [Data structures (`labels`)](../../general/data-structures.md)
+  * [Dataset Configuration (`stack`)](../../general/data-structures.md#dataset-configuration)
+

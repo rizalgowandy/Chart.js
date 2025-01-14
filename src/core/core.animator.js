@@ -1,8 +1,8 @@
-import {requestAnimFrame} from '../helpers/helpers.extras';
+import {requestAnimFrame} from '../helpers/helpers.extras.js';
 
 /**
- * @typedef { import("./core.animation").default } Animation
- * @typedef { import("./core.controller").default } Chart
+ * @typedef { import('./core.animation.js').default } Animation
+ * @typedef { import('./core.controller.js').default } Chart
  */
 
 /**
@@ -211,4 +211,4 @@ export class Animator {
 }
 
 // singleton instance
-export default new Animator();
+export default /* #__PURE__ */ new Animator();

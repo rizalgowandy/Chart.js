@@ -69,3 +69,8 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Bar](../../charts/bar.md)
+  * [`borderRadius`](../../charts/bar.md#borderradius)
+* [Data structures (`labels`)](../../general/data-structures.md)

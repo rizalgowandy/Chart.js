@@ -118,3 +118,13 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Axes scales](../../axes/)
+  * [Common options to all axes (`stacked`)](../../axes/#common-options-to-all-axes)
+  * [Stacking](../../axes/#stacking)
+* [Bar](../../charts/bar.md)
+* [Line](../../charts/line.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+  * [Dataset Configuration (`stack`)](../../general/data-structures.md#dataset-configuration)
+

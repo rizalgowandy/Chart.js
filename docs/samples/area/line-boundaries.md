@@ -118,3 +118,10 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Area](../../charts/area.md)
+  * [Filling modes](../../charts/area.md#filling-modes)
+    * Boundary: `'start'`, `'end'`, `'origin'`
+* [Line](../../charts/line.md)
+* [Data structures (`labels`)](../../general/data-structures.md)

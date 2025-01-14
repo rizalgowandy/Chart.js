@@ -1,6 +1,24 @@
 describe('Chart.controllers.polarArea', function() {
   describe('auto', jasmine.fixture.specs('controller.polarArea'));
 
+  it('should update the scale correctly when data visibility is changed', function() {
+    var expectedScaleMax = 1;
+    var chart = window.acquireChart({
+      type: 'polarArea',
+      data: {
+        datasets: [
+          {data: [100]}
+        ],
+        labels: ['x']
+      }
+    });
+
+    chart.toggleDataVisibility(0);
+    chart.update();
+
+    expect(chart.scales.r.max).toBe(expectedScaleMax);
+  });
+
   it('should be registered as dataset controller', function() {
     expect(typeof Chart.controllers.polarArea).toBe('function');
   });
@@ -328,5 +346,51 @@ describe('Chart.controllers.polarArea', function() {
       expect(arc.options.borderColor).toBe('rgb(50, 100, 150)');
       expect(arc.options.borderWidth).toBe(2);
     });
+  });
+
+  it('should not override tooltip title and label callbacks', async() => {
+    const chart = window.acquireChart({
+      type: 'polarArea',
+      data: {
+        labels: ['Label 1', 'Label 2'],
+        datasets: [{
+          data: [21, 79],
+          label: 'Dataset 1'
+        }, {
+          data: [33, 67],
+          label: 'Dataset 2'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+      }
+    });
+    const {tooltip} = chart;
+    const point = chart.getDatasetMeta(0).data[0];
+
+    await jasmine.triggerMouseEvent(chart, 'mousemove', point);
+
+    expect(tooltip.title).toEqual(['Label 1']);
+    expect(tooltip.body).toEqual([{
+      before: [],
+      lines: ['Dataset 1: 21'],
+      after: []
+    }]);
+
+    chart.options.plugins.tooltip = {mode: 'dataset'};
+    chart.update();
+    await jasmine.triggerMouseEvent(chart, 'mousemove', point);
+
+    expect(tooltip.title).toEqual(['Dataset 1']);
+    expect(tooltip.body).toEqual([{
+      before: [],
+      lines: ['Label 1: 21'],
+      after: []
+    }, {
+      before: [],
+      lines: ['Label 2: 79'],
+      after: []
+    }]);
   });
 });

@@ -1,12 +1,13 @@
-import adapters from '../core/core.adapters';
-import {callback as call, isFinite, isNullOrUndef, mergeIf, valueOrDefault} from '../helpers/helpers.core';
-import {toRadians, isNumber, _limitValue} from '../helpers/helpers.math';
-import Scale from '../core/core.scale';
-import {_arrayUnique, _filterBetween, _lookup} from '../helpers/helpers.collection';
+import adapters from '../core/core.adapters.js';
+import {callback as call, isFinite, isNullOrUndef, mergeIf, valueOrDefault} from '../helpers/helpers.core.js';
+import {toRadians, isNumber, _limitValue} from '../helpers/helpers.math.js';
+import Scale from '../core/core.scale.js';
+import {_arrayUnique, _filterBetween, _lookup} from '../helpers/helpers.collection.js';
 
 /**
- * @typedef { import("../core/core.adapters").Unit } Unit
+ * @typedef { import('../core/core.adapters.js').TimeUnit } Unit
  * @typedef {{common: boolean, size: number, steps?: number}} Interval
+ * @typedef { import('../core/core.adapters.js').DateAdapter } DateAdapter
  */
 
 /**
@@ -27,7 +28,7 @@ const INTERVALS = {
 /**
  * @type {Unit[]}
  */
-const UNITS = /** @type Unit[] */(Object.keys(INTERVALS));
+const UNITS = /** @type Unit[] */ /* #__PURE__ */ (Object.keys(INTERVALS));
 
 /**
  * @param {number} a
@@ -55,10 +56,10 @@ function parse(scale, input) {
     value = parser(value);
   }
 
-  // Only parse if its not a timestamp already
+  // Only parse if it's not a timestamp already
   if (!isFinite(value)) {
     value = typeof parser === 'string'
-      ? adapter.parse(value, parser)
+      ? adapter.parse(value, /** @type {Unit} */ (parser))
       : adapter.parse(value);
   }
 
@@ -197,6 +198,49 @@ function ticksFromTimestamps(scale, values, majorUnit) {
 
 export default class TimeScale extends Scale {
 
+  static id = 'time';
+
+  /**
+   * @type {any}
+   */
+  static defaults = {
+    /**
+     * Scale boundary strategy (bypassed by min/max time options)
+     * - `data`: make sure data are fully visible, ticks outside are removed
+     * - `ticks`: make sure ticks are fully visible, data outside are truncated
+     * @see https://github.com/chartjs/Chart.js/pull/4556
+     * @since 2.7.0
+     */
+    bounds: 'data',
+
+    adapters: {},
+    time: {
+      parser: false, // false == a pattern string from or a custom callback that converts its argument to a timestamp
+      unit: false, // false == automatic or override with week, month, year, etc.
+      round: false, // none, or override with week, month, year, etc.
+      isoWeekday: false, // override week start day
+      minUnit: 'millisecond',
+      displayFormats: {}
+    },
+    ticks: {
+      /**
+       * Ticks generation input values:
+       * - 'auto': generates "optimal" ticks based on scale size and time options.
+       * - 'data': generates ticks from data (including labels from data {t|x|y} objects).
+       * - 'labels': generates ticks from user given `data.labels` values ONLY.
+       * @see https://github.com/chartjs/Chart.js/pull/4507
+       * @since 2.7.0
+       */
+      source: 'auto',
+
+      callback: false,
+
+      major: {
+        enabled: false
+      }
+    }
+  };
+
   /**
 	 * @param {object} props
 	 */
@@ -219,9 +263,12 @@ export default class TimeScale extends Scale {
     this._parseOpts = undefined;
   }
 
-  init(scaleOpts, opts) {
+  init(scaleOpts, opts = {}) {
     const time = scaleOpts.time || (scaleOpts.time = {});
+    /** @type {DateAdapter} */
     const adapter = this._adapter = new adapters._date(scaleOpts.adapters.date);
+
+    adapter.init(opts);
 
     // Backward compatibility: before introducing adapter, `displayFormats` was
     // supposed to contain *all* unit/string pairs but this can't be resolved
@@ -365,10 +412,9 @@ export default class TimeScale extends Scale {
 	 * They add extra margins on the both sides by scaling down the original scale.
 	 * Offsets are added when the `offset` option is true.
 	 * @param {number[]} timestamps
-	 * @return {object}
 	 * @protected
 	 */
-  initOffsets(timestamps) {
+  initOffsets(timestamps = []) {
     let start = 0;
     let end = 0;
     let first, last;
@@ -399,7 +445,7 @@ export default class TimeScale extends Scale {
 	 * `minor` unit using the given scale time `options`.
 	 * Important: this method can return ticks outside the min and max range, it's the
 	 * responsibility of the calling code to clamp values if needed.
-	 * @private
+	 * @protected
 	 */
   _generate() {
     const adapter = this._adapter;
@@ -409,7 +455,7 @@ export default class TimeScale extends Scale {
     const timeOpts = options.time;
     // @ts-ignore
     const minor = timeOpts.unit || determineUnitForAutoTicks(timeOpts.minUnit, min, max, this._getLabelCapacity(min));
-    const stepSize = valueOrDefault(timeOpts.stepSize, 1);
+    const stepSize = valueOrDefault(options.ticks.stepSize, 1);
     const weekday = minor === 'week' ? timeOpts.isoWeekday : false;
     const hasWeekday = isNumber(weekday) || weekday === true;
     const ticks = {};
@@ -439,7 +485,7 @@ export default class TimeScale extends Scale {
     }
 
     // @ts-ignore
-    return Object.keys(ticks).sort((a, b) => a - b).map(x => +x);
+    return Object.keys(ticks).sort(sorter).map(x => +x);
   }
 
   /**
@@ -457,6 +503,19 @@ export default class TimeScale extends Scale {
   }
 
   /**
+	 * @param {number} value
+	 * @param {string|undefined} format
+	 * @return {string}
+	 */
+  format(value, format) {
+    const options = this.options;
+    const formats = options.time.displayFormats;
+    const unit = this._unit;
+    const fmt = format || formats[unit];
+    return this._adapter.format(value, fmt);
+  }
+
+  /**
 	 * Function to format an individual tick mark
 	 * @param {number} time
 	 * @param {number} index
@@ -467,6 +526,12 @@ export default class TimeScale extends Scale {
 	 */
   _tickFormatFunction(time, index, ticks, format) {
     const options = this.options;
+    const formatter = options.ticks.callback;
+
+    if (formatter) {
+      return call(formatter, [time, index, ticks], this);
+    }
+
     const formats = options.time.displayFormats;
     const unit = this._unit;
     const majorUnit = this._majorUnit;
@@ -474,9 +539,8 @@ export default class TimeScale extends Scale {
     const majorFormat = majorUnit && formats[majorUnit];
     const tick = ticks[index];
     const major = majorUnit && majorFormat && tick && tick.major;
-    const label = this._adapter.format(time, format || (major ? majorFormat : minorFormat));
-    const formatter = options.ticks.callback;
-    return formatter ? call(formatter, [label, index, ticks], this) : label;
+
+    return this._adapter.format(time, format || (major ? majorFormat : minorFormat));
   }
 
   /**
@@ -547,7 +611,7 @@ export default class TimeScale extends Scale {
     const timeOpts = this.options.time;
     const displayFormats = timeOpts.displayFormats;
 
-    // pick the longest format (milliseconds) for guestimation
+    // pick the longest format (milliseconds) for guesstimation
     const format = displayFormats[timeOpts.unit] || displayFormats.millisecond;
     const exampleLabel = this._tickFormatFunction(exampleTime, 0, ticksFromTimestamps(this, [exampleTime], this._majorUnit), format);
     const size = this._getLabelSize(exampleLabel);
@@ -609,44 +673,3 @@ export default class TimeScale extends Scale {
     return _arrayUnique(values.sort(sorter));
   }
 }
-
-TimeScale.id = 'time';
-
-/**
- * @type {any}
- */
-TimeScale.defaults = {
-  /**
-	 * Scale boundary strategy (bypassed by min/max time options)
-	 * - `data`: make sure data are fully visible, ticks outside are removed
-	 * - `ticks`: make sure ticks are fully visible, data outside are truncated
-	 * @see https://github.com/chartjs/Chart.js/pull/4556
-	 * @since 2.7.0
-	 */
-  bounds: 'data',
-
-  adapters: {},
-  time: {
-    parser: false, // false == a pattern string from or a custom callback that converts its argument to a timestamp
-    unit: false, // false == automatic or override with week, month, year, etc.
-    round: false, // none, or override with week, month, year, etc.
-    isoWeekday: false, // override week start day
-    minUnit: 'millisecond',
-    displayFormats: {}
-  },
-  ticks: {
-    /**
-		 * Ticks generation input values:
-		 * - 'auto': generates "optimal" ticks based on scale size and time options.
-		 * - 'data': generates ticks from data (including labels from data {t|x|y} objects).
-		 * - 'labels': generates ticks from user given `data.labels` values ONLY.
-		 * @see https://github.com/chartjs/Chart.js/pull/4507
-		 * @since 2.7.0
-		 */
-    source: 'auto',
-
-    major: {
-      enabled: false
-    }
-  }
-};

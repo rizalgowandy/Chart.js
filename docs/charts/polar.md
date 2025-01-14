@@ -58,14 +58,19 @@ The following options can be included in a polar area chart dataset to configure
 | [`backgroundColor`](#styling) | [`Color`](../general/colors.md) | Yes | Yes | `'rgba(0, 0, 0, 0.1)'`
 | [`borderAlign`](#border-alignment) | `'center'`\|`'inner'` | Yes | Yes | `'center'`
 | [`borderColor`](#styling) | [`Color`](../general/colors.md) | Yes | Yes | `'#fff'`
+| [`borderDash`](#styling) | `number[]` | Yes | - | `[]`
+| [`borderDashOffset`](#styling) | `number` | Yes | - | `0.0`
 | [`borderJoinStyle`](#styling) | `'round'`\|`'bevel'`\|`'miter'` | Yes | Yes | `undefined`
 | [`borderWidth`](#styling) | `number` | Yes | Yes | `2`
-| [`clip`](#general) | `number`\|`object` | - | - | `undefined`
+| [`clip`](#general) | `number`\|`object`\|`false` | - | - | `undefined`
 | [`data`](#data-structure) | `number[]` | - | - | **required**
 | [`hoverBackgroundColor`](#interactions) | [`Color`](../general/colors.md) | Yes | Yes | `undefined`
 | [`hoverBorderColor`](#interactions) | [`Color`](../general/colors.md) | Yes | Yes | `undefined`
+| [`hoverBorderDash`](#interactions) | `number[]` | Yes | - | `undefined`
+| [`hoverBorderDashOffset`](#interactions) | `number` | Yes | - | `undefined`
 | [`hoverBorderJoinStyle`](#interactions) | `'round'`\|`'bevel'`\|`'miter'` | Yes | Yes | `undefined`
 | [`hoverBorderWidth`](#interactions) | `number` | Yes | Yes | `undefined`
+| [`circular`](#styling) | `boolean` | Yes | Yes | `true`
 
 All these values, if `undefined`, fallback to the scopes described in [option resolution](../general/options)
 
@@ -83,8 +88,11 @@ The style of each arc can be controlled with the following properties:
 | ---- | ----
 | `backgroundColor` | arc background color.
 | `borderColor` | arc border color.
+| `borderDash` | arc border length and spacing of dashes. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setLineDash).
+| `borderDashOffset` | arc border offset for line dashes. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/lineDashOffset).
 | `borderJoinStyle` | arc border join style. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/lineJoin).
 | `borderWidth` | arc border width (in pixels).
+| `circular` | By default the Arc is curved. If `circular: false` the Arc will be flat.
 
 All these values, if `undefined`, fallback to the associated [`elements.arc.*`](../configuration/elements.md#arc-configuration) options.
 
@@ -105,6 +113,8 @@ The interaction with each arc can be controlled with the following properties:
 | ---- | -----------
 | `hoverBackgroundColor` | arc background color when hovered.
 | `hoverBorderColor` | arc border color when hovered.
+| `hoverBorderDash` | arc border length and spacing of dashes when hovered. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setLineDash).
+| `hoverBorderDashOffset` | arc border offset for line dashes when hovered. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/lineDashOffset).
 | `hoverBorderJoinStyle` | arc border join style when hovered. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/lineJoin).
 | `hoverBorderWidth` | arc border width when hovered (in pixels).
 

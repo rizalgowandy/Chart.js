@@ -1,9 +1,21 @@
-import {isFinite} from '../helpers/helpers.core';
-import LinearScaleBase from './scale.linearbase';
-import Ticks from '../core/core.ticks';
-import {toRadians} from '../helpers';
+import {isFinite} from '../helpers/helpers.core.js';
+import LinearScaleBase from './scale.linearbase.js';
+import Ticks from '../core/core.ticks.js';
+import {toRadians} from '../helpers/index.js';
 
 export default class LinearScale extends LinearScaleBase {
+
+  static id = 'linear';
+
+  /**
+   * @type {any}
+   */
+  static defaults = {
+    ticks: {
+      callback: Ticks.formatters.numeric
+    }
+  };
+
 
   determineDataLimits() {
     const {min, max} = this.getMinMax(true);
@@ -37,14 +49,3 @@ export default class LinearScale extends LinearScaleBase {
     return this._startValue + this.getDecimalForPixel(pixel) * this._valueRange;
   }
 }
-
-LinearScale.id = 'linear';
-
-/**
- * @type {any}
- */
-LinearScale.defaults = {
-  ticks: {
-    callback: Ticks.formatters.numeric
-  }
-};

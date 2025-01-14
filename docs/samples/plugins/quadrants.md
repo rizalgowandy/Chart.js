@@ -77,3 +77,9 @@ module.exports = {
   actions,
   config,
 };
+```
+
+## Docs
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Plugins](../../developers/plugins.md)
+* [Scatter](../../charts/scatter.md)

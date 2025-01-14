@@ -1,9 +1,8 @@
-import defaults from './core.defaults';
-import {defined, each, isObject} from '../helpers/helpers.core';
-import {toPadding} from '../helpers/helpers.options';
+import {defined, each, isObject} from '../helpers/helpers.core.js';
+import {toPadding} from '../helpers/helpers.options.js';
 
 /**
- * @typedef { import("./core.controller").default } Chart
+ * @typedef { import('./core.controller.js').default } Chart
  */
 
 const STATIC_POSITIONS = ['left', 'top', 'right', 'bottom'];
@@ -258,16 +257,6 @@ function placeBoxes(boxes, chartArea, params, stacks) {
   chartArea.x = x;
   chartArea.y = y;
 }
-
-defaults.set('layout', {
-  autoPadding: true,
-  padding: {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0
-  }
-});
 
 /**
  * @interface LayoutItem

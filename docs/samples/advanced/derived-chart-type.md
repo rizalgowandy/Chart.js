@@ -43,4 +43,8 @@ module.exports = {
 
 ## DerivedBubble Implementation
 
-<<< @/docs/scripts/derived-bubble.js
+<<< @/scripts/derived-bubble.js
+
+## Docs
+* [Bubble Chart](../../charts/bubble.md)
+* [New Charts](../../developers/charts.md)

@@ -1,7 +1,39 @@
-import DatasetController from '../core/core.datasetController';
-import {valueOrDefault} from '../helpers/helpers.core';
+import DatasetController from '../core/core.datasetController.js';
+import {valueOrDefault} from '../helpers/helpers.core.js';
 
 export default class BubbleController extends DatasetController {
+
+  static id = 'bubble';
+
+  /**
+   * @type {any}
+   */
+  static defaults = {
+    datasetElementType: false,
+    dataElementType: 'point',
+
+    animations: {
+      numbers: {
+        type: 'number',
+        properties: ['x', 'y', 'borderWidth', 'radius']
+      }
+    }
+  };
+
+  /**
+   * @type {any}
+   */
+  static overrides = {
+    scales: {
+      x: {
+        type: 'linear'
+      },
+      y: {
+        type: 'linear'
+      }
+    }
+  };
+
   initialize() {
     this.enableOptionSharing = true;
     super.initialize();
@@ -63,6 +95,7 @@ export default class BubbleController extends DatasetController {
 	 */
   getLabelAndValue(index) {
     const meta = this._cachedMeta;
+    const labels = this.chart.data.labels || [];
     const {xScale, yScale} = meta;
     const parsed = this.getParsed(index);
     const x = xScale.getLabelForValue(parsed.x);
@@ -70,7 +103,7 @@ export default class BubbleController extends DatasetController {
     const r = parsed._custom;
 
     return {
-      label: meta.label,
+      label: labels[index] || '',
       value: '(' + x + ', ' + y + (r ? ', ' + r : '') + ')'
     };
   }
@@ -85,9 +118,7 @@ export default class BubbleController extends DatasetController {
   updateElements(points, start, count, mode) {
     const reset = mode === 'reset';
     const {iScale, vScale} = this._cachedMeta;
-    const firstOpts = this.resolveDataElementOptions(start, mode);
-    const sharedOptions = this.getSharedOptions(firstOpts);
-    const includeOptions = this.includeOptions(mode, sharedOptions);
+    const {sharedOptions, includeOptions} = this._getSharedOptions(start, mode);
     const iAxis = iScale.axis;
     const vAxis = vScale.axis;
 
@@ -101,7 +132,7 @@ export default class BubbleController extends DatasetController {
       properties.skip = isNaN(iPixel) || isNaN(vPixel);
 
       if (includeOptions) {
-        properties.options = this.resolveDataElementOptions(i, point.active ? 'active' : mode);
+        properties.options = sharedOptions || this.resolveDataElementOptions(i, point.active ? 'active' : mode);
 
         if (reset) {
           properties.options.radius = 0;
@@ -110,8 +141,6 @@ export default class BubbleController extends DatasetController {
 
       this.updateElement(point, i, properties, mode);
     }
-
-    this.updateSharedOptions(sharedOptions, mode, firstOpts);
   }
 
   /**
@@ -138,44 +167,3 @@ export default class BubbleController extends DatasetController {
     return values;
   }
 }
-
-BubbleController.id = 'bubble';
-
-/**
- * @type {any}
- */
-BubbleController.defaults = {
-  datasetElementType: false,
-  dataElementType: 'point',
-
-  animations: {
-    numbers: {
-      type: 'number',
-      properties: ['x', 'y', 'borderWidth', 'radius']
-    }
-  }
-};
-
-/**
- * @type {any}
- */
-BubbleController.overrides = {
-  scales: {
-    x: {
-      type: 'linear'
-    },
-    y: {
-      type: 'linear'
-    }
-  },
-  plugins: {
-    tooltip: {
-      callbacks: {
-        title() {
-          // Title doesn't make sense for scatter since we format the data as a point
-          return '';
-        }
-      }
-    }
-  }
-};

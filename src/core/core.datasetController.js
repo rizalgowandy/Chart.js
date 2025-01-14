@@ -1,12 +1,12 @@
-import Animations from './core.animations';
-import defaults from './core.defaults';
-import {isArray, isFinite, isObject, valueOrDefault, resolveObjectKey, defined} from '../helpers/helpers.core';
-import {listenArrayEvents, unlistenArrayEvents} from '../helpers/helpers.collection';
-import {createContext, sign} from '../helpers';
+import Animations from './core.animations.js';
+import defaults from './core.defaults.js';
+import {isArray, isFinite, isObject, valueOrDefault, resolveObjectKey, defined} from '../helpers/helpers.core.js';
+import {listenArrayEvents, unlistenArrayEvents} from '../helpers/helpers.collection.js';
+import {createContext, sign} from '../helpers/index.js';
 
 /**
- * @typedef { import("./core.controller").default } Chart
- * @typedef { import("./core.scale").default } Scale
+ * @typedef { import('./core.controller.js').default } Chart
+ * @typedef { import('./core.scale.js').default } Scale
  */
 
 function scaleClip(scale, allowedOverflow) {
@@ -76,9 +76,11 @@ function applyStack(stack, value, dsIndex, options = {}) {
     return;
   }
 
+  let found = false;
   for (i = 0, ilen = keys.length; i < ilen; ++i) {
     datasetIndex = +keys[i];
     if (datasetIndex === dsIndex) {
+      found = true;
       if (options.all) {
         continue;
       }
@@ -89,18 +91,26 @@ function applyStack(stack, value, dsIndex, options = {}) {
       value += otherValue;
     }
   }
+
+  if (!found && !options.all) {
+    return 0;
+  }
+
   return value;
 }
 
-function convertObjectDataToArray(data) {
+function convertObjectDataToArray(data, meta) {
+  const {iScale, vScale} = meta;
+  const iAxisKey = iScale.axis === 'x' ? 'x' : 'y';
+  const vAxisKey = vScale.axis === 'x' ? 'x' : 'y';
   const keys = Object.keys(data);
   const adata = new Array(keys.length);
   let i, ilen, key;
   for (i = 0, ilen = keys.length; i < ilen; ++i) {
     key = keys[i];
     adata[i] = {
-      x: key,
-      y: data[key]
+      [iAxisKey]: key,
+      [vAxisKey]: data[key]
     };
   }
   return adata;
@@ -158,6 +168,9 @@ function updateStacks(controller, parsed) {
 
     stack._top = getLastIndexInStack(stack, vScale, true, meta.type);
     stack._bottom = getLastIndexInStack(stack, vScale, false, meta.type);
+
+    const visualValues = stack._visualValues || (stack._visualValues = {});
+    visualValues[datasetIndex] = value;
   }
 }
 
@@ -207,6 +220,9 @@ function clearStacks(meta, items) {
       return;
     }
     delete stacks[axis][datasetIndex];
+    if (stacks[axis]._visualValues !== undefined && stacks[axis]._visualValues[datasetIndex] !== undefined) {
+      delete stacks[axis]._visualValues[datasetIndex];
+    }
   }
 }
 
@@ -216,6 +232,21 @@ const createStack = (canStack, meta, chart) => canStack && !meta.hidden && meta.
   && {keys: getSortedDatasetIndices(chart, true), values: null};
 
 export default class DatasetController {
+
+  /**
+   * @type {any}
+   */
+  static defaults = {};
+
+  /**
+   * Element type used to generate a meta dataset (e.g. Chart.element.LineElement).
+   */
+  static datasetElementType = null;
+
+  /**
+   * Element type used to generate a meta data (e.g. Chart.element.PointElement).
+   */
+  static dataElementType = null;
 
   /**
 	 * @param {Chart} chart
@@ -240,6 +271,8 @@ export default class DatasetController {
     this.supportsDecimation = false;
     this.$context = undefined;
     this._syncList = [];
+    this.datasetElementType = new.target.datasetElementType;
+    this.dataElementType = new.target.dataElementType;
 
     this.initialize();
   }
@@ -250,6 +283,10 @@ export default class DatasetController {
     this.linkScales();
     meta._stacked = isStacked(meta.vScale, meta);
     this.addElements();
+
+    if (this.options.fill && !this.chart.isPluginEnabled('filler')) {
+      console.warn("Tried to use the 'fill' option without the 'Filler' plugin enabled. Please import and register the 'Filler' plugin and make sure it is not disabled in the options");
+    }
   }
 
   updateIndex(datasetIndex) {
@@ -330,12 +367,13 @@ export default class DatasetController {
     const data = dataset.data || (dataset.data = []);
     const _data = this._data;
 
-    // In order to correctly handle data addition/deletion animation (an thus simulate
+    // In order to correctly handle data addition/deletion animation (and thus simulate
     // real-time charts), we need to monitor these data modifications and synchronize
-    // the internal meta data accordingly.
+    // the internal metadata accordingly.
 
     if (isObject(data)) {
-      this._data = convertObjectDataToArray(data);
+      const meta = this._cachedMeta;
+      this._data = convertObjectDataToArray(data, meta);
     } else if (_data !== data) {
       if (_data) {
         // This case happens when the user replaced the data array instance.
@@ -389,6 +427,7 @@ export default class DatasetController {
     // if stack changed, update stack values for the whole dataset
     if (stackChanged || oldStacked !== meta._stacked) {
       updateStacks(this, meta._parsed);
+      meta._stacked = isStacked(meta.vScale, meta);
     }
   }
 
@@ -557,7 +596,7 @@ export default class DatasetController {
     const value = parsed[scale.axis];
     const stack = {
       keys: getSortedDatasetIndices(chart, true),
-      values: parsed._stacks[scale.axis]
+      values: parsed._stacks[scale.axis]._visualValues
     };
     return applyStack(stack, value, meta.index, {mode});
   }
@@ -778,7 +817,7 @@ export default class DatasetController {
     const names = Object.keys(defaults.elements[elementType]);
     // context is provided as a function, and is called only if needed,
     // so we don't create a context for each element if not needed.
-    const context = () => this.getContext(index, active);
+    const context = () => this.getContext(index, active, mode);
     const values = config.resolveNamedOptions(scopes, names, context, prefixes);
 
     if (values.$shared) {
@@ -838,6 +877,18 @@ export default class DatasetController {
 	 */
   includeOptions(mode, sharedOptions) {
     return !sharedOptions || isDirectUpdateMode(mode) || this.chart._animationsDisabled;
+  }
+
+  /**
+   * @todo v4, rename to getSharedOptions and remove excess functions
+   */
+  _getSharedOptions(start, mode) {
+    const firstOpts = this.resolveDataElementOptions(start, mode);
+    const previouslySharedOptions = this._sharedOptions;
+    const sharedOptions = this.getSharedOptions(firstOpts);
+    const includeOptions = this.includeOptions(mode, sharedOptions) || (sharedOptions !== previouslySharedOptions);
+    this.updateSharedOptions(sharedOptions, mode, firstOpts);
+    return {sharedOptions, includeOptions};
   }
 
   /**
@@ -997,31 +1048,19 @@ export default class DatasetController {
     this.chart._dataChanges.push([this.index, ...args]);
   }
 
-  /**
-	 * @private
-	 */
   _onDataPush() {
     const count = arguments.length;
     this._sync(['_insertElements', this.getDataset().data.length - count, count]);
   }
 
-  /**
-	 * @private
-	 */
   _onDataPop() {
     this._sync(['_removeElements', this._cachedMeta.data.length - 1, 1]);
   }
 
-  /**
-	 * @private
-	 */
   _onDataShift() {
     this._sync(['_removeElements', 0, 1]);
   }
 
-  /**
-	 * @private
-	 */
   _onDataSplice(start, count) {
     if (count) {
       this._sync(['_removeElements', start, count]);
@@ -1032,25 +1071,7 @@ export default class DatasetController {
     }
   }
 
-  /**
-	 * @private
-	 */
   _onDataUnshift() {
     this._sync(['_insertElements', 0, arguments.length]);
   }
 }
-
-/**
- * @type {any}
- */
-DatasetController.defaults = {};
-
-/**
- * Element type used to generate a meta dataset (e.g. Chart.element.LineElement).
- */
-DatasetController.prototype.datasetElementType = null;
-
-/**
- * Element type used to generate a meta data (e.g. Chart.element.PointElement).
- */
-DatasetController.prototype.dataElementType = null;

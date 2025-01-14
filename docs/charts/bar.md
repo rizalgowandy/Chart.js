@@ -74,11 +74,11 @@ Only the `data` option needs to be specified in the dataset namespace.
 | [`barPercentage`](#barpercentage) | `number` | - | - | `0.9` |
 | [`barThickness`](#barthickness) | `number`\|`string` | - | - | |
 | [`borderColor`](#styling) | [`Color`](../general/colors.md) | Yes | Yes | `'rgba(0, 0, 0, 0.1)'`
-| [`borderSkipped`](#borderskipped) | `string` | Yes | Yes | `'start'`
+| [`borderSkipped`](#borderskipped) | `string`\|`boolean` | Yes | Yes | `'start'`
 | [`borderWidth`](#borderwidth) | `number`\|`object` | Yes | Yes | `0`
 | [`borderRadius`](#borderradius) | `number`\|`object` | Yes | Yes | `0`
 | [`categoryPercentage`](#categorypercentage) | `number` | - | - | `0.8` |
-| [`clip`](#general) | `number`\|`object` | - | - |
+| [`clip`](#general) | `number`\|`object`\|`false` | - | - |
 | [`data`](#data-structure) | `object`\|`object[]`\| `number[]`\|`string[]` | - | - | **required**
 | [`grouped`](#general) | `boolean` | - | - | `true` |
 | [`hoverBackgroundColor`](#interactions) | [`Color`](../general/colors.md) | Yes | Yes |
@@ -163,7 +163,8 @@ Options are:
 * `'left'`
 * `'top'`
 * `'right'`
-* `false`
+* `false` (don't skip any borders)
+* `true` (skip all borders)
 
 #### borderWidth
 
@@ -179,7 +180,7 @@ When the border radius is supplied as a number and the chart is stacked, the rad
 
 #### inflateAmount
 
-This option can be used to inflate the rects that are used to draw the bars. This can be used to hide artifacts between bars when `barPercentage`(#barpercentage) * `categoryPercentage`(#categorypercentage) is 1. The default value `'auto'` should work in most cases.
+This option can be used to inflate the rects that are used to draw the bars. This can be used to hide artifacts between bars when [`barPercentage`](#barpercentage) * [`categoryPercentage`](#categorypercentage) is 1. The default value `'auto'` should work in most cases.
 
 ### Interactions
 
@@ -271,7 +272,7 @@ Sample:     |==================|
 
 ## Data Structure
 
-All of the supported [data structures](../general/data-structures.md) can be used with bar charts.
+All the supported [data structures](../general/data-structures.md) can be used with bar charts.
 
 ## Stacked Bar Chart
 
@@ -297,7 +298,7 @@ const stackedBar = new Chart(ctx, {
 ## Horizontal Bar Chart
 
 A horizontal bar chart is a variation on a vertical bar chart. It is sometimes used to show trend data, and the comparison of multiple data sets side by side.
-To achieve this you will have to set the `indexAxis` property in the options object to `'y'`.
+To achieve this, you will have to set the `indexAxis` property in the options object to `'y'`.
 The default for this property is `'x'` and thus will show vertical bars.
 
 ```js chart-editor

@@ -1,7 +1,9 @@
-import Element from '../core/core.element';
-import {isObject, _isBetween, _limitValue} from '../helpers';
-import {addRoundedRectPath} from '../helpers/helpers.canvas';
-import {toTRBL, toTRBLCorners} from '../helpers/helpers.options';
+import Element from '../core/core.element.js';
+import {isObject, _isBetween, _limitValue} from '../helpers/index.js';
+import {addRoundedRectPath} from '../helpers/helpers.canvas.js';
+import {toTRBL, toTRBLCorners} from '../helpers/helpers.options.js';
+
+/** @typedef {{ x: number, y: number, base: number, horizontal: boolean, width: number, height: number }} BarProps */
 
 /**
  * Helper function to get the bounds of the bar regardless of the orientation
@@ -11,7 +13,7 @@ import {toTRBL, toTRBLCorners} from '../helpers/helpers.options';
  * @private
  */
 function getBarBounds(bar, useFinalPosition) {
-  const {x, y, base, width, height} = bar.getProps(['x', 'y', 'base', 'width', 'height'], useFinalPosition);
+  const {x, y, base, width, height} = /** @type {BarProps} */ (bar.getProps(['x', 'y', 'base', 'width', 'height'], useFinalPosition));
 
   let left, right, top, bottom, half;
 
@@ -138,6 +140,27 @@ function inflateRect(rect, amount, refRect = {}) {
 
 export default class BarElement extends Element {
 
+  static id = 'bar';
+
+  /**
+   * @type {any}
+   */
+  static defaults = {
+    borderSkipped: 'start',
+    borderWidth: 0,
+    borderRadius: 0,
+    inflateAmount: 'auto',
+    pointStyle: undefined
+  };
+
+  /**
+   * @type {any}
+   */
+  static defaultRoutes = {
+    backgroundColor: 'backgroundColor',
+    borderColor: 'borderColor'
+  };
+
   constructor(cfg) {
     super();
 
@@ -190,7 +213,7 @@ export default class BarElement extends Element {
   }
 
   getCenterPoint(useFinalPosition) {
-    const {x, y, base, horizontal} = this.getProps(['x', 'y', 'base', 'horizontal'], useFinalPosition);
+    const {x, y, base, horizontal} = /** @type {BarProps} */ (this.getProps(['x', 'y', 'base', 'horizontal'], useFinalPosition));
     return {
       x: horizontal ? (x + base) / 2 : x,
       y: horizontal ? y : (y + base) / 2
@@ -201,24 +224,3 @@ export default class BarElement extends Element {
     return axis === 'x' ? this.width / 2 : this.height / 2;
   }
 }
-
-BarElement.id = 'bar';
-
-/**
- * @type {any}
- */
-BarElement.defaults = {
-  borderSkipped: 'start',
-  borderWidth: 0,
-  borderRadius: 0,
-  inflateAmount: 'auto',
-  pointStyle: undefined
-};
-
-/**
- * @type {any}
- */
-BarElement.defaultRoutes = {
-  backgroundColor: 'backgroundColor',
-  borderColor: 'borderColor'
-};

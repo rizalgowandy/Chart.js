@@ -7,7 +7,7 @@ const actions = [
     name: 'pointStyle: circle (default)',
     handler: (chart) => {
       chart.data.datasets.forEach(dataset => {
-        dataset.pointStyle = 'cirlce';
+        dataset.pointStyle = 'circle';
       });
       chart.update();
     }
@@ -92,6 +92,15 @@ const actions = [
       });
       chart.update();
     }
+  },
+  {
+    name: 'pointStyle: false',
+    handler: (chart) => {
+      chart.data.datasets.forEach(dataset => {
+        dataset.pointStyle = false;
+      });
+      chart.update();
+    }
   }
 ];
 // </block:actions>
@@ -134,3 +143,8 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Line](../../charts/line.md)
+  * [Point Styling](../../charts/line.md#point-styling)

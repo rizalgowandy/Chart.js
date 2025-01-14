@@ -1,5 +1,8 @@
-import {getHoverColor} from '../helpers/helpers.color';
-import {isObject, merge, valueOrDefault} from '../helpers/helpers.core';
+import {getHoverColor} from '../helpers/helpers.color.js';
+import {isObject, merge, valueOrDefault} from '../helpers/helpers.core.js';
+import {applyAnimationsDefaults} from './core.animations.defaults.js';
+import {applyLayoutsDefaults} from './core.layouts.defaults.js';
+import {applyScaleDefaults} from './core.scale.defaults.js';
 
 export const overrides = Object.create(null);
 export const descriptors = Object.create(null);
@@ -33,7 +36,7 @@ function set(root, scope, values) {
  * Note: class is exported for typedoc
  */
 export class Defaults {
-  constructor(_descriptors) {
+  constructor(_descriptors, _appliers) {
     this.animation = undefined;
     this.backgroundColor = 'rgba(0,0,0,0.1)';
     this.borderColor = 'rgba(0,0,0,0.1)';
@@ -62,7 +65,8 @@ export class Defaults {
     this.indexAxis = 'x';
     this.interaction = {
       mode: 'nearest',
-      intersect: true
+      intersect: true,
+      includeInvisible: false
     };
     this.maintainAspectRatio = true;
     this.onHover = null;
@@ -76,6 +80,7 @@ export class Defaults {
     this.drawActiveElementsOnTop = true;
 
     this.describe(_descriptors);
+    this.apply(_appliers);
   }
 
   /**
@@ -150,10 +155,14 @@ export class Defaults {
       }
     });
   }
+
+  apply(appliers) {
+    appliers.forEach((apply) => apply(this));
+  }
 }
 
 // singleton instance
-export default new Defaults({
+export default /* #__PURE__ */ new Defaults({
   _scriptable: (name) => !name.startsWith('on'),
   _indexable: (name) => name !== 'events',
   hover: {
@@ -163,4 +172,4 @@ export default new Defaults({
     _scriptable: false,
     _indexable: false,
   }
-});
+}, [applyAnimationsDefaults, applyLayoutsDefaults, applyScaleDefaults]);

@@ -1,6 +1,6 @@
 # Responsive Charts
 
-When it comes to changing the chart size based on the window size, a major limitation is that the canvas *render* size (`canvas.width` and `.height`) can **not** be expressed with relative values, contrary to the *display* size (`canvas.style.width` and `.height`). Furthermore, these sizes are independent from each other and thus the canvas *render* size does not adjust automatically based on the *display* size, making the rendering inaccurate.
+When it comes to changing the chart size based on the window size, a major limitation is that the canvas *render* size (`canvas.width` and `.height`) can **not** be expressed with relative values, contrary to the *display* size (`canvas.style.width` and `.height`). Furthermore, these sizes are independent of each other and thus the canvas *render* size does not adjust automatically based on the *display* size, making the rendering inaccurate.
 
 The following examples **do not work**:
 
@@ -18,9 +18,9 @@ Namespace: `options`
 | ---- | ---- | ------- | -----------
 | `responsive` | `boolean` | `true` | Resizes the chart canvas when its container does ([important note...](#important-note)).
 | `maintainAspectRatio` | `boolean` | `true` | Maintain the original canvas aspect ratio `(width / height)` when resizing.
-| `aspectRatio` | `number` | `2` | Canvas aspect ratio (i.e. `width / height`, a value of 1 representing a square canvas). Note that this option is ignored if the height is explicitly defined either as attribute or via the style.
+| `aspectRatio` | `number` | `1`\|`2` | Canvas aspect ratio (i.e. `width / height`, a value of 1 representing a square canvas). Note that this option is ignored if the height is explicitly defined either as attribute or via the style. The default value varies by chart type; Radial charts (doughnut, pie, polarArea, radar) default to `1` and others default to `2`.
 | `onResize` | `function` | `null` | Called when a resize occurs. Gets passed two arguments: the chart instance and the new size.
-| `resizeDelay` | `number` | `0` | Delay the resize update by give amount of milliseconds. This can ease the resize process by debouncing update of the elements.
+| `resizeDelay` | `number` | `0` | Delay the resize update by the given amount of milliseconds. This can ease the resize process by debouncing the update of the elements.
 
 ## Important Note
 

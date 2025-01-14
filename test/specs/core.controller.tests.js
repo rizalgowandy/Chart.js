@@ -32,7 +32,7 @@ describe('Chart', function() {
     expect(createChart).toThrow(new Error(
       'Canvas is already in use. ' +
 			'Chart with ID \'' + chart.id + '\'' +
-			' must be destroyed before the canvas can be reused.'
+			' must be destroyed before the canvas with ID \'' + chart.canvas.id + '\' can be reused.'
     ));
 
     chart.destroy();
@@ -443,6 +443,7 @@ describe('Chart', function() {
         options: {
           scales: {
             foo: {
+              axis: 'x',
               type: 'logarithmic',
               _jasmineCheckC: 'c2',
               _jasmineCheckD: 'd2'
@@ -1253,6 +1254,7 @@ describe('Chart', function() {
           done();
         });
         canvas.parentNode.style.width = '455px';
+        canvas.parentNode.style.height = '455px';
       });
     });
 
@@ -1340,7 +1342,7 @@ describe('Chart', function() {
       wrapper.style.width = '450px';
     });
 
-    it('should not resize the canvas when parent height changes', function(done) {
+    it('should maintain aspect ratio when parent height changes', function(done) {
       var chart = acquireChart({
         options: {
           responsive: true,
@@ -1369,8 +1371,8 @@ describe('Chart', function() {
 
         waitForResize(chart, function() {
           expect(chart).toBeChartOfSize({
-            dw: 320, dh: 160,
-            rw: 320, rh: 160,
+            dw: 300, dh: 150,
+            rw: 300, rh: 150,
           });
 
           done();
@@ -1806,7 +1808,8 @@ describe('Chart', function() {
         'resize'
       ],
       destroy: [
-        'destroy'
+        'beforeDestroy',
+        'afterDestroy'
       ]
     };
 
@@ -1855,6 +1858,7 @@ describe('Chart', function() {
         done();
       });
       chart.canvas.parentNode.style.width = '400px';
+      chart.canvas.parentNode.style.height = '400px';
     });
 
     it ('should notify initially disabled plugin in correct order', function() {

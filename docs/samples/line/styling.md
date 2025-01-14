@@ -74,3 +74,8 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Line](../../charts/line.md)
+  * [Line Styling](../../charts/line.md#line-styling)

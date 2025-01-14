@@ -108,3 +108,11 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Colors](../../general/colors.md)
+  * [Patterns and Gradients](../../general/colors.md#patterns-and-gradients)  
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)
+* [Line](../../charts/line.md)

@@ -1016,4 +1016,191 @@ describe('Chart.controllers.line', function() {
       expect(point.stop).toBe(i === 3);
     }
   });
+
+  it('should correctly calc visible points on update', async() => {
+    var chart = window.acquireChart({
+      type: 'line',
+      data: {
+        datasets: [{
+          data: [
+            {x: 10, y: 20},
+            {x: 15, y: 19},
+          ]
+        }],
+      },
+      options: {
+        scales: {
+          y: {
+            type: 'linear',
+            min: 0,
+            max: 25,
+          },
+          x: {
+            type: 'linear',
+            min: 0,
+            max: 50
+          },
+        }
+      }
+    });
+
+    chart.data.datasets[0].data = [
+      {x: 10, y: 20},
+      {x: 15, y: 19},
+      {x: 17, y: 12},
+      {x: 50, y: 9},
+      {x: 50, y: 9},
+      {x: 50, y: 9},
+      {x: 51, y: 9},
+      {x: 52, y: 9},
+      {x: 52, y: 9},
+    ];
+    chart.update();
+
+    var point = chart.getDatasetMeta(0).data[0];
+    var event = {
+      type: 'mousemove',
+      native: true,
+      ...point
+    };
+
+    chart._handleEvent(event, false, true);
+
+    const visiblePoints = chart.getSortedVisibleDatasetMetas()[0].data.filter(_ => !_.skip);
+
+    expect(visiblePoints.length).toBe(6);
+  }, 500);
+
+  it('should correctly calc _drawStart and _drawCount when first points beyond scale limits are null and spanGaps=true', async() => {
+    var chart = window.acquireChart({
+      type: 'line',
+      data: {
+        labels: [0, 10, 20, 30, 40, 50],
+        datasets: [{
+          data: [3, null, 2, 3, null, 1.5],
+          spanGaps: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'linear',
+            min: 11,
+            max: 40,
+          }
+        }
+      }
+    });
+
+    chart.update();
+    var controller = chart.getDatasetMeta(0).controller;
+
+    expect(controller._drawStart).toBe(0);
+    expect(controller._drawCount).toBe(6);
+  }, 500);
+
+  it('should correctly calc _drawStart and _drawCount when all points beyond scale limits are null and spanGaps=true', async() => {
+    var chart = window.acquireChart({
+      type: 'line',
+      data: {
+        labels: [0, 10, 20, 30, 40, 50],
+        datasets: [{
+          data: [null, null, 2, 3, null, null],
+          spanGaps: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'linear',
+            min: 11,
+            max: 40,
+          }
+        }
+      }
+    });
+
+    chart.update();
+    var controller = chart.getDatasetMeta(0).controller;
+
+    expect(controller._drawStart).toBe(1);
+    expect(controller._drawCount).toBe(4);
+  }, 500);
+
+  it('should correctly calc _drawStart and _drawCount when spanGaps=false', async() => {
+    var chart = window.acquireChart({
+      type: 'line',
+      data: {
+        labels: [0, 10, 20, 30, 40, 50],
+        datasets: [{
+          data: [3, null, 2, 3, null, 1.5],
+          spanGaps: false,
+          tension: 0.4
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'linear',
+            min: 11,
+            max: 40,
+          }
+        }
+      }
+    });
+
+    chart.update();
+    var controller = chart.getDatasetMeta(0).controller;
+
+    expect(controller._drawStart).toBe(1);
+    expect(controller._drawCount).toBe(4);
+  }, 500);
+
+  it('should not override tooltip title and label callbacks', async() => {
+    const chart = window.acquireChart({
+      type: 'line',
+      data: {
+        labels: ['Label 1', 'Label 2'],
+        datasets: [{
+          data: [21, 79],
+          label: 'Dataset 1'
+        }, {
+          data: [33, 67],
+          label: 'Dataset 2'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+      }
+    });
+    const {tooltip} = chart;
+    const point = chart.getDatasetMeta(0).data[0];
+
+    await jasmine.triggerMouseEvent(chart, 'mousemove', point);
+
+    expect(tooltip.title).toEqual(['Label 1']);
+    expect(tooltip.body).toEqual([{
+      before: [],
+      lines: ['Dataset 1: 21'],
+      after: []
+    }]);
+
+    chart.options.plugins.tooltip = {mode: 'dataset'};
+    chart.update();
+    await jasmine.triggerMouseEvent(chart, 'mousemove', point);
+
+    expect(tooltip.title).toEqual(['Dataset 1']);
+    expect(tooltip.body).toEqual([{
+      before: [],
+      lines: ['Label 1: 21'],
+      after: []
+    }, {
+      before: [],
+      lines: ['Label 2: 79'],
+      after: []
+    }]);
+  });
 });

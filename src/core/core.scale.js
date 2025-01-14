@@ -1,21 +1,17 @@
-import Element from './core.element';
-import {_alignPixel, _measureText, renderText, clipArea, unclipArea} from '../helpers/helpers.canvas';
-import {callback as call, each, finiteOrDefault, isArray, isFinite, isNullOrUndef, isObject, valueOrDefault} from '../helpers/helpers.core';
-import {toDegrees, toRadians, _int16Range, _limitValue, HALF_PI} from '../helpers/helpers.math';
-import {_alignStartEnd, _toLeftRightCenter} from '../helpers/helpers.extras';
-import {createContext, toFont, toPadding, _addGrace} from '../helpers/helpers.options';
-
-import './core.scale.defaults';
-
-
-import {autoSkip} from './core.scale.autoskip';
-
+import Element from './core.element.js';
+import {_alignPixel, _measureText, renderText, clipArea, unclipArea} from '../helpers/helpers.canvas.js';
+import {callback as call, each, finiteOrDefault, isArray, isFinite, isNullOrUndef, isObject, valueOrDefault} from '../helpers/helpers.core.js';
+import {toDegrees, toRadians, _int16Range, _limitValue, HALF_PI} from '../helpers/helpers.math.js';
+import {_alignStartEnd, _toLeftRightCenter} from '../helpers/helpers.extras.js';
+import {createContext, toFont, toPadding, _addGrace} from '../helpers/helpers.options.js';
+import {autoSkip} from './core.scale.autoskip.js';
 
 const reverseAlign = (align) => align === 'left' ? 'right' : align === 'right' ? 'left' : align;
 const offsetFromEdge = (scale, edge, offset) => edge === 'top' || edge === 'left' ? scale[edge] + offset : scale[edge] - offset;
+const getTicksLimit = (ticksLength, maxTicksLimit) => Math.min(maxTicksLimit || ticksLength, ticksLength);
 
 /**
- * @typedef { import("./core.controller").default } Chart
+ * @typedef { import('../types/index.js').Chart } Chart
  * @typedef {{value:number | string, label?:string, major?:boolean, $context?:any}} Tick
  */
 
@@ -124,6 +120,7 @@ function createTickContext(parent, index, tick) {
 }
 
 function titleAlign(align, position, reverse) {
+  /** @type {CanvasTextAlign} */
   let ret = _toLeftRightCenter(align);
   if ((reverse && position !== 'right') || (!reverse && position === 'right')) {
     ret = reverseAlign(ret);
@@ -178,7 +175,7 @@ export default class Scale extends Element {
     this.id = cfg.id;
     /** @type {string} */
     this.type = cfg.type;
-    /** @type {object} */
+    /** @type {any} */
     this.options = undefined;
     /** @type {CanvasRenderingContext2D} */
     this.ctx = cfg.ctx;
@@ -253,7 +250,7 @@ export default class Scale extends Element {
   }
 
   /**
-	 * @param {object} options
+	 * @param {any} options
 	 * @since 3.0
 	 */
   init(options) {
@@ -304,7 +301,6 @@ export default class Scale extends Element {
 	 * @since 3.0
 	 */
   getMinMax(canStack) {
-    // eslint-disable-next-line prefer-const
     let {min, max, minDefined, maxDefined} = this.getUserBounds();
     let range;
 
@@ -362,6 +358,14 @@ export default class Scale extends Element {
   getLabels() {
     const data = this.chart.data;
     return this.options.labels || (this.isHorizontal() ? data.xLabels : data.yLabels) || data.labels || [];
+  }
+
+  /**
+   * @return {import('../types.js').LabelItem[]}
+   */
+  getLabelItems(chartArea = this.chart.chartArea) {
+    const items = this._labelItems || (this._labelItems = this._computeLabelItems(chartArea));
+    return items;
   }
 
   // When a new layout is created, reset the data limits cache
@@ -582,7 +586,7 @@ export default class Scale extends Element {
   calculateLabelRotation() {
     const options = this.options;
     const tickOpts = options.ticks;
-    const numTicks = this.ticks.length;
+    const numTicks = getTicksLimit(this.ticks.length, options.ticks.maxTicksLimit);
     const minRotation = tickOpts.minRotation || 0;
     const maxRotation = tickOpts.maxRotation;
     let labelRotation = minRotation;
@@ -800,7 +804,7 @@ export default class Scale extends Element {
         ticks = sample(ticks, sampleSize);
       }
 
-      this._labelSizes = labelSizes = this._computeLabelSizes(ticks, ticks.length);
+      this._labelSizes = labelSizes = this._computeLabelSizes(ticks, ticks.length, this.options.ticks.maxTicksLimit);
     }
 
     return labelSizes;
@@ -812,15 +816,16 @@ export default class Scale extends Element {
 	 * @return {{ first: object, last: object, widest: object, highest: object, widths: Array, heights: array }}
 	 * @private
 	 */
-  _computeLabelSizes(ticks, length) {
+  _computeLabelSizes(ticks, length, maxTicksLimit) {
     const {ctx, _longestTextCache: caches} = this;
     const widths = [];
     const heights = [];
+    const increment = Math.floor(length / getTicksLimit(length, maxTicksLimit));
     let widestLabelSize = 0;
     let highestLabelSize = 0;
     let i, j, jlen, label, tickFont, fontString, cache, lineHeight, width, height, nestedLabel;
 
-    for (i = 0; i < length; ++i) {
+    for (i = 0; i < length; i += increment) {
       label = ticks[i].label;
       tickFont = this._resolveTickFontOptions(i);
       ctx.font = fontString = tickFont.string;
@@ -834,7 +839,7 @@ export default class Scale extends Element {
       } else if (isArray(label)) {
         // if it is an array let's measure each element
         for (j = 0, jlen = label.length; j < jlen; ++j) {
-          nestedLabel = label[j];
+          nestedLabel = /** @type {string} */ (label[j]);
           // Undefined labels and arrays should not be measured
           if (!isNullOrUndef(nestedLabel) && !isArray(nestedLabel)) {
             width = _measureText(ctx, cache.data, cache.gc, width, nestedLabel);
@@ -1009,7 +1014,7 @@ export default class Scale extends Element {
     const axis = this.axis;
     const chart = this.chart;
     const options = this.options;
-    const {grid, position} = options;
+    const {grid, position, border} = options;
     const offset = grid.offset;
     const isHorizontal = this.isHorizontal();
     const ticks = this.ticks;
@@ -1017,8 +1022,8 @@ export default class Scale extends Element {
     const tl = getTickMarkLength(grid);
     const items = [];
 
-    const borderOpts = grid.setContext(this.getContext());
-    const axisWidth = borderOpts.drawBorder ? borderOpts.borderWidth : 0;
+    const borderOpts = border.setContext(this.getContext());
+    const axisWidth = borderOpts.display ? borderOpts.width : 0;
     const axisHalfWidth = axisWidth / 2;
     const alignBorderValue = function(pixel) {
       return _alignPixel(chart, pixel, axisWidth);
@@ -1081,12 +1086,14 @@ export default class Scale extends Element {
     const limit = valueOrDefault(options.ticks.maxTicksLimit, ticksLength);
     const step = Math.max(1, Math.ceil(ticksLength / limit));
     for (i = 0; i < ticksLength; i += step) {
-      const optsAtIndex = grid.setContext(this.getContext(i));
+      const context = this.getContext(i);
+      const optsAtIndex = grid.setContext(context);
+      const optsAtIndexBorder = border.setContext(context);
 
       const lineWidth = optsAtIndex.lineWidth;
       const lineColor = optsAtIndex.color;
-      const borderDash = grid.borderDash || [];
-      const borderDashOffset = optsAtIndex.borderDashOffset;
+      const borderDash = optsAtIndexBorder.dash || [];
+      const borderDashOffset = optsAtIndexBorder.dashOffset;
 
       const tickWidth = optsAtIndex.tickWidth;
       const tickColor = optsAtIndex.tickColor;
@@ -1244,6 +1251,9 @@ export default class Scale extends Element {
         if (mirror) {
           textOffset *= -1;
         }
+        if (rotation !== 0 && !optsAtIndex.showLabelBackdrop) {
+          x += (lineHeight / 2) * Math.sin(rotation);
+        }
       } else {
         y = pixel;
         textOffset = (1 - lineCount) * lineHeight / 2;
@@ -1256,8 +1266,8 @@ export default class Scale extends Element {
         const height = labelSizes.heights[i];
         const width = labelSizes.widths[i];
 
-        let top = y + textOffset - labelPadding.top;
-        let left = x - labelPadding.left;
+        let top = textOffset - labelPadding.top;
+        let left = 0 - labelPadding.left;
 
         switch (textBaseline) {
         case 'middle':
@@ -1277,6 +1287,13 @@ export default class Scale extends Element {
         case 'right':
           left -= width;
           break;
+        case 'inner':
+          if (i === ilen - 1) {
+            left -= width;
+          } else if (i > 0) {
+            left -= width / 2;
+          }
+          break;
         default:
           break;
         }
@@ -1292,17 +1309,19 @@ export default class Scale extends Element {
       }
 
       items.push({
-        rotation,
         label,
         font,
-        color,
-        strokeColor,
-        strokeWidth,
         textOffset,
-        textAlign: tickTextAlign,
-        textBaseline,
-        translation: [x, y],
-        backdrop,
+        options: {
+          rotation,
+          color,
+          strokeColor,
+          strokeWidth,
+          textAlign: tickTextAlign,
+          textBaseline,
+          translation: [x, y],
+          backdrop,
+        }
       });
     }
 
@@ -1501,9 +1520,9 @@ export default class Scale extends Element {
 	 * @protected
 	 */
   drawBorder() {
-    const {chart, ctx, options: {grid}} = this;
-    const borderOpts = grid.setContext(this.getContext());
-    const axisWidth = grid.drawBorder ? borderOpts.borderWidth : 0;
+    const {chart, ctx, options: {border, grid}} = this;
+    const borderOpts = border.setContext(this.getContext());
+    const axisWidth = border.display ? borderOpts.width : 0;
     if (!axisWidth) {
       return;
     }
@@ -1521,8 +1540,8 @@ export default class Scale extends Element {
       x1 = x2 = borderValue;
     }
     ctx.save();
-    ctx.lineWidth = borderOpts.borderWidth;
-    ctx.strokeStyle = borderOpts.borderColor;
+    ctx.lineWidth = borderOpts.width;
+    ctx.strokeStyle = borderOpts.color;
 
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -1549,21 +1568,13 @@ export default class Scale extends Element {
       clipArea(ctx, area);
     }
 
-    const items = this._labelItems || (this._labelItems = this._computeLabelItems(chartArea));
-    let i, ilen;
-
-    for (i = 0, ilen = items.length; i < ilen; ++i) {
-      const item = items[i];
+    const items = this.getLabelItems(chartArea);
+    for (const item of items) {
+      const renderTextOptions = item.options;
       const tickFont = item.font;
       const label = item.label;
-
-      if (item.backdrop) {
-        ctx.fillStyle = item.backdrop.color;
-        ctx.fillRect(item.backdrop.left, item.backdrop.top, item.backdrop.width, item.backdrop.height);
-      }
-
-      let y = item.textOffset;
-      renderText(ctx, label, 0, y, tickFont, item);
+      const y = item.textOffset;
+      renderText(ctx, label, 0, y, tickFont, renderTextOptions);
     }
 
     if (area) {
@@ -1627,6 +1638,7 @@ export default class Scale extends Element {
     const opts = this.options;
     const tz = opts.ticks && opts.ticks.z || 0;
     const gz = valueOrDefault(opts.grid && opts.grid.z, -1);
+    const bz = valueOrDefault(opts.border && opts.border.z, 0);
 
     if (!this._isVisible() || this.draw !== Scale.prototype.draw) {
       // backward compatibility: draw has been overridden by custom scale
@@ -1646,7 +1658,7 @@ export default class Scale extends Element {
         this.drawTitle();
       }
     }, {
-      z: gz + 1, // TODO, v4 move border options to its own object and add z
+      z: bz,
       draw: () => {
         this.drawBorder();
       }

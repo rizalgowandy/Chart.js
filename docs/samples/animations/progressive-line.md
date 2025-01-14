@@ -88,3 +88,20 @@ module.exports = {
 };
 
 ```
+
+## Api 
+* [Chart](../../api/classes/Chart.md)
+  * [`getDatasetMeta`](../../api/classes/Chart.md#getdatasetmeta)
+* [Scale](../../api/classes/Scale.md)
+  * [`getPixelForValue`](../../api/classes/Scale.md#getpixelforvalue)
+## Docs
+* [Animations](../../configuration/animations.md)
+  * [animation](../../configuration/animations.md#animation)
+    * `delay`
+    * `duration`
+    * `easing`
+    * `loop`
+* [Line](../../charts/line.md)
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)
+    * [Data Context](../../general/options.md#data)

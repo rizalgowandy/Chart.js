@@ -71,3 +71,7 @@ module.exports = {
   config: config,
 };
 ```
+## Docs
+* [Bar](../../charts/bar.md)
+  * [Stacked Bar Chart](../../charts/bar.md#stacked-bar-chart)
+

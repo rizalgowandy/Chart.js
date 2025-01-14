@@ -6,8 +6,13 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   correct_repository:
+    permissions:
+      contents: none
     runs-on: ubuntu-latest
     steps:
       - name: fail on fork
@@ -18,19 +23,20 @@ jobs:
     needs: correct_repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4.0.0
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '14.x'
-          cache: npm
+          node-version: 16
+          cache: pnpm
       - name: Package & Deploy Docs
         run: |
-          npm ci
-          npm run build
+          pnpm install
+          pnpm run build
           ./scripts/docs-config.sh "master"
-          npm run docs
-          npm pack
+          pnpm run docs
+          pnpm pack
           ./scripts/deploy-docs.sh "master"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_AUTH_TOKEN }}

@@ -1,8 +1,8 @@
-import DatasetController from '../core/core.datasetController';
+import DatasetController from '../core/core.datasetController.js';
 import {
   _arrayUnique, isArray, isNullOrUndef,
   valueOrDefault, resolveObjectKey, sign, defined
-} from '../helpers';
+} from '../helpers/index.js';
 
 function getAllScaleValues(scale, type) {
   if (!scale._cache.$bar) {
@@ -208,6 +208,11 @@ function setBorderSkipped(properties, options, stack, index) {
     return;
   }
 
+  if (edge === true) {
+    properties.borderSkipped = {top: true, right: true, bottom: true, left: true};
+    return;
+  }
+
   const {start, end, reverse, top, bottom} = borderProps(properties);
 
   if (edge === 'middle' && stack) {
@@ -251,6 +256,47 @@ function setInflateAmount(properties, {inflateAmount}, ratio) {
 }
 
 export default class BarController extends DatasetController {
+
+  static id = 'bar';
+
+  /**
+   * @type {any}
+   */
+  static defaults = {
+    datasetElementType: false,
+    dataElementType: 'bar',
+
+    categoryPercentage: 0.8,
+    barPercentage: 0.9,
+    grouped: true,
+
+    animations: {
+      numbers: {
+        type: 'number',
+        properties: ['x', 'y', 'base', 'width', 'height']
+      }
+    }
+  };
+
+  /**
+   * @type {any}
+   */
+  static overrides = {
+    scales: {
+      _index_: {
+        type: 'category',
+        offset: true,
+        grid: {
+          offset: true
+        }
+      },
+      _value_: {
+        type: 'linear',
+        beginAtZero: true,
+      }
+    }
+  };
+
 
   /**
 	 * Overriding primitive data parsing since we support mixed primitive/array
@@ -350,11 +396,7 @@ export default class BarController extends DatasetController {
     const base = vScale.getBasePixel();
     const horizontal = vScale.isHorizontal();
     const ruler = this._getRuler();
-    const firstOpts = this.resolveDataElementOptions(start, mode);
-    const sharedOptions = this.getSharedOptions(firstOpts);
-    const includeOptions = this.includeOptions(mode, sharedOptions);
-
-    this.updateSharedOptions(sharedOptions, mode, firstOpts);
+    const {sharedOptions, includeOptions} = this._getSharedOptions(start, mode);
 
     for (let i = start; i < start + count; i++) {
       const parsed = this.getParsed(i);
@@ -390,29 +432,26 @@ export default class BarController extends DatasetController {
 	 * @private
 	 */
   _getStacks(last, dataIndex) {
-    const meta = this._cachedMeta;
-    const iScale = meta.iScale;
-    const metasets = iScale.getMatchingVisibleMetas(this._type);
+    const {iScale} = this._cachedMeta;
+    const metasets = iScale.getMatchingVisibleMetas(this._type)
+      .filter(meta => meta.controller.options.grouped);
     const stacked = iScale.options.stacked;
-    const ilen = metasets.length;
     const stacks = [];
-    let i, item;
+    const currentParsed = this._cachedMeta.controller.getParsed(dataIndex);
+    const iScaleValue = currentParsed && currentParsed[iScale.axis];
 
-    for (i = 0; i < ilen; ++i) {
-      item = metasets[i];
+    const skipNull = (meta) => {
+      const parsed = meta._parsed.find(item => item[iScale.axis] === iScaleValue);
+      const val = parsed && parsed[meta.vScale.axis];
 
-      if (!item.controller.options.grouped) {
-        continue;
+      if (isNullOrUndef(val) || isNaN(val)) {
+        return true;
       }
+    };
 
-      if (typeof dataIndex !== 'undefined') {
-        const val = item.controller.getParsed(dataIndex)[
-          item.controller._cachedMeta.vScale.axis
-        ];
-
-        if (isNullOrUndef(val) || isNaN(val)) {
-          continue;
-        }
+    for (const meta of metasets) {
+      if (dataIndex !== undefined && skipNull(meta)) {
+        continue;
       }
 
       // stacked   | meta.stack
@@ -420,11 +459,11 @@ export default class BarController extends DatasetController {
       // false     |   x   |     x     |     x
       // true      |       |     x     |
       // undefined |       |     x     |     x
-      if (stacked === false || stacks.indexOf(item.stack) === -1 ||
-				(stacked === undefined && item.stack === undefined)) {
-        stacks.push(item.stack);
+      if (stacked === false || stacks.indexOf(meta.stack) === -1 ||
+				(stacked === undefined && meta.stack === undefined)) {
+        stacks.push(meta.stack);
       }
-      if (item.index === last) {
+      if (meta.index === last) {
         break;
       }
     }
@@ -501,7 +540,7 @@ export default class BarController extends DatasetController {
 	 * @private
 	 */
   _calculateBarValuePixels(index) {
-    const {_cachedMeta: {vScale, _stacked}, options: {base: baseValue, minBarLength}} = this;
+    const {_cachedMeta: {vScale, _stacked, index: datasetIndex}, options: {base: baseValue, minBarLength}} = this;
     const actualBase = baseValue || 0;
     const parsed = this.getParsed(index);
     const custom = parsed._custom;
@@ -549,6 +588,11 @@ export default class BarController extends DatasetController {
       const max = Math.max(startPixel, endPixel);
       base = Math.max(Math.min(base, max), min);
       head = base + size;
+
+      if (_stacked && !floating) {
+        // visual data coordinates after applying minBarLength
+        parsed._stacks[vScale.axis]._visualValues[datasetIndex] = vScale.getValueForPixel(head) - vScale.getValueForPixel(base);
+      }
     }
 
     if (base === vScale.getPixelForValue(actualBase)) {
@@ -605,50 +649,10 @@ export default class BarController extends DatasetController {
     let i = 0;
 
     for (; i < ilen; ++i) {
-      if (this.getParsed(i)[vScale.axis] !== null) {
+      if (this.getParsed(i)[vScale.axis] !== null && !rects[i].hidden) {
         rects[i].draw(this._ctx);
       }
     }
   }
 
 }
-
-BarController.id = 'bar';
-
-/**
- * @type {any}
- */
-BarController.defaults = {
-  datasetElementType: false,
-  dataElementType: 'bar',
-
-  categoryPercentage: 0.8,
-  barPercentage: 0.9,
-  grouped: true,
-
-  animations: {
-    numbers: {
-      type: 'number',
-      properties: ['x', 'y', 'base', 'width', 'height']
-    }
-  }
-};
-
-/**
- * @type {any}
- */
-BarController.overrides = {
-  scales: {
-    _index_: {
-      type: 'category',
-      offset: true,
-      grid: {
-        offset: true
-      }
-    },
-    _value_: {
-      type: 'linear',
-      beginAtZero: true,
-    }
-  }
-};

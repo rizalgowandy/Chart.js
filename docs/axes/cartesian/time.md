@@ -1,6 +1,6 @@
 # Time Cartesian Axis
 
-The time scale is used to display times and dates. Data are spread according to the amount of time between data points. When building its ticks, it will automatically calculate the most comfortable unit base on the size of the scale.
+The time scale is used to display times and dates. Data are spread according to the amount of time between data points. When building its ticks, it will automatically calculate the most comfortable unit based on the size of the scale.
 
 ## Date Adapters
 
@@ -38,7 +38,6 @@ Namespace: `options.scales[scaleId]`
 | `time.round` | `string` | `false` | If defined, dates will be rounded to the start of this unit. See [Time Units](#time-units) below for the allowed units.
 | `time.tooltipFormat` | `string` | | The format string to use for the tooltip.
 | `time.unit` | `string` | `false` | If defined, will force the unit to be a certain type. See [Time Units](#time-units) section below for details.
-| `time.stepSize` | `number` | `1` | The number of units between grid lines.
 | `time.minUnit` | `string` | `'millisecond'` | The minimum display format to be used for a time unit.
 
 !!!include(axes/cartesian/_common.md)!!!
@@ -132,7 +131,7 @@ If this is a function, it must return a type that can be handled by your date ad
 ## Min Max Configuration
 
 For both the `min` and `max` properties, the value must be `string` that is parsable by your date adapter or a number with the amount of milliseconds that have elapsed since UNIX epoch.
-In the example below the x axis will start at 7 October 2021.
+In the example below the x axis will start at 7 November 2021.
 
 ```javascript
 let chart = new Chart(ctx, {
@@ -159,6 +158,35 @@ let chart = new Chart(ctx, {
         }
     }
 });
+```
+
+## Changing the scale type from Time scale to Logarithmic/Linear scale.
+
+When changing the scale type from Time scale to Logarithmic/Linear scale, you need to add `bounds: 'ticks'` to the scale options. Changing the `bounds` parameter is necessary because its default value is the `'data'` for the Time scale.
+
+Initial config:
+
+```javascript
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: data,
+    options: {
+        scales: {
+            x: {
+                type: 'time',
+            }
+        }
+    }
+});
+```
+
+Scale update:
+
+```javascript
+chart.options.scales.x = {
+    type: 'logarithmic',
+    bounds: 'ticks'
+};
 ```
 
 ## Internal data format

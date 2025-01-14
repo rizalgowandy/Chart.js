@@ -47,4 +47,9 @@ module.exports = {
 
 ## Log2 axis implementation
 
-<<< @/docs/scripts/log2.js
+<<< @/scripts/log2.js
+
+## Docs
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Line](../../charts/line.md)
+* [New Axes](../../developers/axes.md)

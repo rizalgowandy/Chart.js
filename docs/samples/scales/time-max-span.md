@@ -124,3 +124,8 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Line](../../charts/line.md)
+  * [`spanGaps`](../../charts/line.md#line-styling)
+* [Time Scale](../../axes/cartesian/time.md)

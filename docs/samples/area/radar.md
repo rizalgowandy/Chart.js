@@ -139,3 +139,10 @@ module.exports = {
 ```
 
 <div id="chart-analyser" class="analyser"></div>
+
+## Docs
+* [Area](../../charts/area.md)
+  * [Filling modes](../../charts/area.md#filling-modes)
+  * [`propagate`](../../charts/area.md#propagate)
+* [Radar](../../charts/radar.md)
+* [Data structures (`labels`)](../../general/data-structures.md)

@@ -73,6 +73,7 @@ describe('Time scale tests', function() {
       },
       ticks: {
         source: 'auto',
+        callback: false,
         major: {
           enabled: false
         }
@@ -353,8 +354,8 @@ describe('Time scale tests', function() {
                 }
               },
               ticks: {
-                callback: function(value) {
-                  return '<' + value + '>';
+                callback: function(_, i) {
+                  return '<' + i + '>';
                 }
               }
             }
@@ -368,21 +369,21 @@ describe('Time scale tests', function() {
       var labels = getLabels(this.scale);
 
       expect(labels.length).toEqual(21);
-      expect(labels[0]).toEqual('<8:00:00>');
-      expect(labels[labels.length - 1]).toEqual('<8:01:00>');
+      expect(labels[0]).toEqual('<0>');
+      expect(labels[labels.length - 1]).toEqual('<60>');
     });
 
     it('should update ticks.callback correctly', function() {
       var chart = this.chart;
-      chart.options.scales.x.ticks.callback = function(value) {
-        return '{' + value + '}';
+      chart.options.scales.x.ticks.callback = function(_, i) {
+        return '{' + i + '}';
       };
       chart.update();
 
       var labels = getLabels(this.scale);
       expect(labels.length).toEqual(21);
-      expect(labels[0]).toEqual('{8:00:00}');
-      expect(labels[labels.length - 1]).toEqual('{8:01:00}');
+      expect(labels[0]).toEqual('{0}');
+      expect(labels[labels.length - 1]).toEqual('{60}');
     });
   });
 
@@ -410,6 +411,49 @@ describe('Time scale tests', function() {
     var value = controller.getParsed(0)[xScale.id];
     expect(xScale.getLabelForValue(value)).toBeTruthy();
     expect(xScale.getLabelForValue(value)).toBe('Jan 1, 2015, 8:00:00 pm');
+  });
+
+  it('should get the correct label for a data value by format', function() {
+    var chart = window.acquireChart({
+      type: 'line',
+      data: {
+        datasets: [{
+          xAxisID: 'x',
+          data: [null, 10, 3]
+        }],
+        labels: ['2015-01-01T20:00:00', '2015-01-02T21:00:00', '2015-01-03T22:00:00', '2015-01-05T23:00:00', '2015-01-07T03:00', '2015-01-08T10:00', '2015-01-10T12:00'], // days
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'day',
+              displayFormats: {
+                day: 'YYYY-MM-DD'
+              }
+            },
+            position: 'bottom',
+            ticks: {
+              source: 'labels',
+              autoSkip: false
+            }
+          }
+        }
+      }
+    });
+
+    var xScale = chart.scales.x;
+    for (const lbl of chart.data.labels) {
+      var dd = xScale._adapter.parse(lbl);
+      var parsed = lbl.split('T');
+      expect(xScale.format(dd)).toBe(parsed[0]);
+    }
+    for (const lbl of chart.data.labels) {
+      var mm = xScale._adapter.parse(lbl);
+      var yearMonth = lbl.substring(0, 7);
+      expect(xScale.format(mm, 'YYYY-MM')).toBe(yearMonth);
+    }
   });
 
   it('should round to isoWeekday', function() {
@@ -1101,8 +1145,8 @@ describe('Time scale tests', function() {
           },
           y: {
             type: 'linear',
-            grid: {
-              drawBorder: false
+            border: {
+              display: false
             }
           }
         }
@@ -1234,5 +1278,59 @@ describe('Time scale tests', function() {
         expect(chart.options.scales.x.time.displayFormats).toEqual(expected);
       });
     });
+  });
+
+  it('should pass chart options to date adapter', function() {
+    let chartOptions;
+
+    Chart._adapters._date.override({
+      init(options) {
+        chartOptions = options;
+      }
+    });
+
+    var chart = window.acquireChart({
+      type: 'line',
+      data: {},
+      options: {
+        locale: 'es',
+        scales: {
+          x: {
+            type: 'time'
+          },
+        }
+      }
+    });
+
+    expect(chartOptions).toEqual(chart.options);
+  });
+
+  it('should pass timestamp to ticks callback', () => {
+    let callbackValue;
+    window.acquireChart({
+      type: 'line',
+      data: {
+        datasets: [{
+          xAxisID: 'x',
+          data: [0, 0]
+        }],
+        labels: ['2015-01-01T20:00:00', '2015-01-01T20:01:00']
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'time',
+            ticks: {
+              callback(value) {
+                callbackValue = value;
+                return value;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    expect(typeof callbackValue).toBe('number');
   });
 });

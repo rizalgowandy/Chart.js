@@ -1,4 +1,5 @@
 # Bar Chart
+Demo selecting bar color based on the bar's y value.
 
 ```js chart-editor
 // <block:setup:2>
@@ -71,3 +72,10 @@ module.exports = {
   config,
 };
 ```
+
+## Docs
+* [Bar](../../charts/bar.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+  * [Dataset Configuration (`stack`)](../../general/data-structures.md#dataset-configuration)
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)

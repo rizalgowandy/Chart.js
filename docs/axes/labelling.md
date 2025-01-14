@@ -22,7 +22,7 @@ To do this, you need to override the `ticks.callback` method in the axis configu
 
 The method receives 3 arguments:
 
-* `value` - the tick value in the **internal data format** of the associated scale.
+* `value` - the tick value in the **internal data format** of the associated scale. For time scale, it is a timestamp.
 * `index` - the tick index in the ticks array.
 * `ticks` - the array containing all of the [tick objects](../api/interfaces/Tick).
 
@@ -31,7 +31,7 @@ The call to the method is scoped to the scale. `this` inside the method is the s
 If the callback returns `null` or `undefined` the associated grid line will be hidden.
 
 :::tip
-The [category axis](../axes/cartesian/category), which is the default x-axis for line and bar charts, uses the `index` as internal data format. For accessing the label, use `this.getLabelForValue(value)`. [API: getLabelForValue](../api/classes/scale.html#getlabelforvalue)
+The [category axis](../axes/cartesian/category), which is the default x-axis for line and bar charts, uses the `index` as internal data format. For accessing the label, use `this.getLabelForValue(value)`. [API: getLabelForValue](../api/classes/Scale.md#getlabelforvalue)
 :::
 
 In the following example, every label of the Y-axis would be displayed with a dollar sign at the front.

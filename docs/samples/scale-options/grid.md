@@ -42,7 +42,7 @@ const data = {
 
 // <block:config:0>
 // Change these settings to change the display for different parts of the X axis
-// grid configuiration
+// grid configuration
 const DISPLAY = true;
 const BORDER = true;
 const CHART_AREA = true;
@@ -61,16 +61,20 @@ const config = {
     },
     scales: {
       x: {
+        border: {
+          display: BORDER
+        },
         grid: {
           display: DISPLAY,
-          drawBorder: BORDER,
           drawOnChartArea: CHART_AREA,
           drawTicks: TICKS,
         }
       },
       y: {
+        border: {
+          display: false
+        },
         grid: {
-          drawBorder: false,
           color: function(context) {
             if (context.tick.value > 0) {
               return Utils.CHART_COLORS.green;
@@ -92,3 +96,12 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Line](../../charts/line.md)
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)
+    * [Tick Context](../../general/options.md#tick)
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Axes Styling](../../axes/styling.md)
+  * [Grid Line Configuration](../../axes/styling.md#grid-line-configuration)

@@ -57,3 +57,13 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs 
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Line](../../charts/line.md)
+* [Legend](../../configuration/legend.md)
+  * [Legend Label Configuration](../../configuration/legend.md#legend-label-configuration)
+    * `usePointStyle`
+* [Elements](../../configuration/elements.md)
+  * [Point Configuration](../../configuration/elements.md#point-configuration)
+  * [Point Styles](../../configuration/elements.md#point-styles)

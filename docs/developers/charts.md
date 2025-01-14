@@ -69,9 +69,9 @@ The following methods may optionally be overridden by derived dataset controller
 
 ## Extending Existing Chart Types
 
-Extending or replacing an existing controller type is easy. Simply replace the constructor for one of the built in types with your own.
+Extending or replacing an existing controller type is easy. Simply replace the constructor for one of the built-in types with your own.
 
-The built in controller types are:
+The built-in controller types are:
 
 * `BarController`
 * `BubbleController`
@@ -126,12 +126,12 @@ new Chart(ctx, {
 
 If you want your new chart type to be statically typed, you must provide a `.d.ts` TypeScript declaration file. Chart.js provides a way to augment built-in types with user-defined ones, by using the concept of "declaration merging".
 
-When adding a new chart type, `ChartTypeRegistry` must contains the declarations for the new type, either by extending an existing entry in `ChartTypeRegistry` or by creating a new one.
+When adding a new chart type, `ChartTypeRegistry` must contain the declarations for the new type, either by extending an existing entry in `ChartTypeRegistry` or by creating a new one.
 
 For example, to provide typings for a new chart type that extends from a bubble chart, you would add a `.d.ts` containing:
 
-```ts
-import { ChartTypeRegistry } from 'chart.js'
+```typescript
+import { ChartTypeRegistry } from 'chart.js';
 
 declare module 'chart.js' {
     interface ChartTypeRegistry {

@@ -100,3 +100,8 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Polar Area Chart](../../charts/polar.md)
+* [Linear Radial Axis](../../axes/radial/linear.md)
+  * [Point Label Options (`centerPointLabels`)](../../axes/radial/linear.md#point-label-options)

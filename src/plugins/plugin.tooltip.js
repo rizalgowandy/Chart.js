@@ -1,16 +1,17 @@
-import Animations from '../core/core.animations';
-import Element from '../core/core.element';
-import {addRoundedRectPath} from '../helpers/helpers.canvas';
-import {each, noop, isNullOrUndef, isArray, _elementsEqual} from '../helpers/helpers.core';
-import {toFont, toPadding, toTRBLCorners} from '../helpers/helpers.options';
-import {getRtlAdapter, overrideTextDirection, restoreTextDirection} from '../helpers/helpers.rtl';
-import {distanceBetweenPoints, _limitValue} from '../helpers/helpers.math';
-import {createContext, drawPoint} from '../helpers';
+import Animations from '../core/core.animations.js';
+import Element from '../core/core.element.js';
+import {addRoundedRectPath} from '../helpers/helpers.canvas.js';
+import {each, noop, isNullOrUndef, isArray, _elementsEqual, isObject} from '../helpers/helpers.core.js';
+import {toFont, toPadding, toTRBLCorners} from '../helpers/helpers.options.js';
+import {getRtlAdapter, overrideTextDirection, restoreTextDirection} from '../helpers/helpers.rtl.js';
+import {distanceBetweenPoints, _limitValue} from '../helpers/helpers.math.js';
+import {createContext, drawPoint} from '../helpers/index.js';
 
 /**
- * @typedef { import("../platform/platform.base").Chart } Chart
- * @typedef { import("../../types/index.esm").ChartEvent } ChartEvent
- * @typedef { import("../../types/index.esm").ActiveElement } ActiveElement
+ * @typedef { import('../platform/platform.base.js').Chart } Chart
+ * @typedef { import('../types/index.js').ChartEvent } ChartEvent
+ * @typedef { import('../types/index.js').ActiveElement } ActiveElement
+ * @typedef { import('../core/core.interaction.js').InteractionItem } InteractionItem
  */
 
 const positioners = {
@@ -23,7 +24,7 @@ const positioners = {
     }
 
     let i, len;
-    let x = 0;
+    let xSet = new Set();
     let y = 0;
     let count = 0;
 
@@ -31,14 +32,21 @@ const positioners = {
       const el = items[i].element;
       if (el && el.hasValue()) {
         const pos = el.tooltipPosition();
-        x += pos.x;
+        xSet.add(pos.x);
         y += pos.y;
         ++count;
       }
     }
 
+    // No visible items where found, return false so we don't have to divide by 0 which reduces in NaN
+    if (count === 0 || xSet.size === 0) {
+      return false;
+    }
+
+    const xAverage = [...xSet].reduce((a, b) => a + b) / xSet.size;
+
     return {
-      x: x / count,
+      x: xAverage,
       y: y / count
     };
   },
@@ -350,7 +358,109 @@ function overrideCallbacks(callbacks, context) {
   return override ? callbacks.override(override) : callbacks;
 }
 
+const defaultCallbacks = {
+  // Args are: (tooltipItems, data)
+  beforeTitle: noop,
+  title(tooltipItems) {
+    if (tooltipItems.length > 0) {
+      const item = tooltipItems[0];
+      const labels = item.chart.data.labels;
+      const labelCount = labels ? labels.length : 0;
+
+      if (this && this.options && this.options.mode === 'dataset') {
+        return item.dataset.label || '';
+      } else if (item.label) {
+        return item.label;
+      } else if (labelCount > 0 && item.dataIndex < labelCount) {
+        return labels[item.dataIndex];
+      }
+    }
+
+    return '';
+  },
+  afterTitle: noop,
+
+  // Args are: (tooltipItems, data)
+  beforeBody: noop,
+
+  // Args are: (tooltipItem, data)
+  beforeLabel: noop,
+  label(tooltipItem) {
+    if (this && this.options && this.options.mode === 'dataset') {
+      return tooltipItem.label + ': ' + tooltipItem.formattedValue || tooltipItem.formattedValue;
+    }
+
+    let label = tooltipItem.dataset.label || '';
+
+    if (label) {
+      label += ': ';
+    }
+    const value = tooltipItem.formattedValue;
+    if (!isNullOrUndef(value)) {
+      label += value;
+    }
+    return label;
+  },
+  labelColor(tooltipItem) {
+    const meta = tooltipItem.chart.getDatasetMeta(tooltipItem.datasetIndex);
+    const options = meta.controller.getStyle(tooltipItem.dataIndex);
+    return {
+      borderColor: options.borderColor,
+      backgroundColor: options.backgroundColor,
+      borderWidth: options.borderWidth,
+      borderDash: options.borderDash,
+      borderDashOffset: options.borderDashOffset,
+      borderRadius: 0,
+    };
+  },
+  labelTextColor() {
+    return this.options.bodyColor;
+  },
+  labelPointStyle(tooltipItem) {
+    const meta = tooltipItem.chart.getDatasetMeta(tooltipItem.datasetIndex);
+    const options = meta.controller.getStyle(tooltipItem.dataIndex);
+    return {
+      pointStyle: options.pointStyle,
+      rotation: options.rotation,
+    };
+  },
+  afterLabel: noop,
+
+  // Args are: (tooltipItems, data)
+  afterBody: noop,
+
+  // Args are: (tooltipItems, data)
+  beforeFooter: noop,
+  footer: noop,
+  afterFooter: noop
+};
+
+/**
+ * Invoke callback from object with context and arguments.
+ * If callback returns `undefined`, then will be invoked default callback.
+ * @param {Record<keyof typeof defaultCallbacks, Function>} callbacks
+ * @param {keyof typeof defaultCallbacks} name
+ * @param {*} ctx
+ * @param {*} arg
+ * @returns {any}
+ */
+function invokeCallbackWithFallback(callbacks, name, ctx, arg) {
+  const result = callbacks[name].call(ctx, arg);
+
+  if (typeof result === 'undefined') {
+    return defaultCallbacks[name].call(ctx, arg);
+  }
+
+  return result;
+}
+
 export class Tooltip extends Element {
+
+  /**
+   * @namespace Chart.Tooltip.positioners
+   */
+  static positioners = positioners;
+
   constructor(config) {
     super();
 
@@ -362,9 +472,7 @@ export class Tooltip extends Element {
     this._tooltipItems = [];
     this.$animations = undefined;
     this.$context = undefined;
-    // TODO: V4, remove config._chart and this._chart backward compatibility aliases
-    this.chart = config.chart || config._chart;
-    this._chart = this.chart;
+    this.chart = config.chart;
     this.options = config.options;
     this.dataPoints = undefined;
     this.title = undefined;
@@ -425,9 +533,9 @@ export class Tooltip extends Element {
   getTitle(context, options) {
     const {callbacks} = options;
 
-    const beforeTitle = callbacks.beforeTitle.apply(this, [context]);
-    const title = callbacks.title.apply(this, [context]);
-    const afterTitle = callbacks.afterTitle.apply(this, [context]);
+    const beforeTitle = invokeCallbackWithFallback(callbacks, 'beforeTitle', this, context);
+    const title = invokeCallbackWithFallback(callbacks, 'title', this, context);
+    const afterTitle = invokeCallbackWithFallback(callbacks, 'afterTitle', this, context);
 
     let lines = [];
     lines = pushOrConcat(lines, splitNewlines(beforeTitle));
@@ -438,7 +546,9 @@ export class Tooltip extends Element {
   }
 
   getBeforeBody(tooltipItems, options) {
-    return getBeforeAfterBodyLines(options.callbacks.beforeBody.apply(this, [tooltipItems]));
+    return getBeforeAfterBodyLines(
+      invokeCallbackWithFallback(options.callbacks, 'beforeBody', this, tooltipItems)
+    );
   }
 
   getBody(tooltipItems, options) {
@@ -452,9 +562,9 @@ export class Tooltip extends Element {
         after: []
       };
       const scoped = overrideCallbacks(callbacks, context);
-      pushOrConcat(bodyItem.before, splitNewlines(scoped.beforeLabel.call(this, context)));
-      pushOrConcat(bodyItem.lines, scoped.label.call(this, context));
-      pushOrConcat(bodyItem.after, splitNewlines(scoped.afterLabel.call(this, context)));
+      pushOrConcat(bodyItem.before, splitNewlines(invokeCallbackWithFallback(scoped, 'beforeLabel', this, context)));
+      pushOrConcat(bodyItem.lines, invokeCallbackWithFallback(scoped, 'label', this, context));
+      pushOrConcat(bodyItem.after, splitNewlines(invokeCallbackWithFallback(scoped, 'afterLabel', this, context)));
 
       bodyItems.push(bodyItem);
     });
@@ -463,16 +573,18 @@ export class Tooltip extends Element {
   }
 
   getAfterBody(tooltipItems, options) {
-    return getBeforeAfterBodyLines(options.callbacks.afterBody.apply(this, [tooltipItems]));
+    return getBeforeAfterBodyLines(
+      invokeCallbackWithFallback(options.callbacks, 'afterBody', this, tooltipItems)
+    );
   }
 
   // Get the footer and beforeFooter and afterFooter lines
   getFooter(tooltipItems, options) {
     const {callbacks} = options;
 
-    const beforeFooter = callbacks.beforeFooter.apply(this, [tooltipItems]);
-    const footer = callbacks.footer.apply(this, [tooltipItems]);
-    const afterFooter = callbacks.afterFooter.apply(this, [tooltipItems]);
+    const beforeFooter = invokeCallbackWithFallback(callbacks, 'beforeFooter', this, tooltipItems);
+    const footer = invokeCallbackWithFallback(callbacks, 'footer', this, tooltipItems);
+    const afterFooter = invokeCallbackWithFallback(callbacks, 'afterFooter', this, tooltipItems);
 
     let lines = [];
     lines = pushOrConcat(lines, splitNewlines(beforeFooter));
@@ -511,9 +623,9 @@ export class Tooltip extends Element {
     // Determine colors for boxes
     each(tooltipItems, (context) => {
       const scoped = overrideCallbacks(options.callbacks, context);
-      labelColors.push(scoped.labelColor.call(this, context));
-      labelPointStyles.push(scoped.labelPointStyle.call(this, context));
-      labelTextColors.push(scoped.labelTextColor.call(this, context));
+      labelColors.push(invokeCallbackWithFallback(scoped, 'labelColor', this, context));
+      labelPointStyles.push(invokeCallbackWithFallback(scoped, 'labelPointStyle', this, context));
+      labelTextColors.push(invokeCallbackWithFallback(scoped, 'labelTextColor', this, context));
     });
 
     this.labelColors = labelColors;
@@ -675,9 +787,9 @@ export class Tooltip extends Element {
 	 * @private
 	 */
   _drawColorBox(ctx, pt, i, rtlHelper, options) {
-    const labelColors = this.labelColors[i];
+    const labelColor = this.labelColors[i];
     const labelPointStyle = this.labelPointStyles[i];
-    const {boxHeight, boxWidth, boxPadding} = options;
+    const {boxHeight, boxWidth} = options;
     const bodyFont = toFont(options.bodyFont);
     const colorX = getAlignedX(this, 'left', options);
     const rtlColorX = rtlHelper.x(colorX);
@@ -702,20 +814,20 @@ export class Tooltip extends Element {
       drawPoint(ctx, drawOptions, centerX, centerY);
 
       // Draw the point
-      ctx.strokeStyle = labelColors.borderColor;
-      ctx.fillStyle = labelColors.backgroundColor;
+      ctx.strokeStyle = labelColor.borderColor;
+      ctx.fillStyle = labelColor.backgroundColor;
       drawPoint(ctx, drawOptions, centerX, centerY);
     } else {
       // Border
-      ctx.lineWidth = labelColors.borderWidth || 1; // TODO, v4 remove fallback
-      ctx.strokeStyle = labelColors.borderColor;
-      ctx.setLineDash(labelColors.borderDash || []);
-      ctx.lineDashOffset = labelColors.borderDashOffset || 0;
+      ctx.lineWidth = isObject(labelColor.borderWidth) ? Math.max(...Object.values(labelColor.borderWidth)) : (labelColor.borderWidth || 1); // TODO, v4 remove fallback
+      ctx.strokeStyle = labelColor.borderColor;
+      ctx.setLineDash(labelColor.borderDash || []);
+      ctx.lineDashOffset = labelColor.borderDashOffset || 0;
 
       // Fill a white rect so that colours merge nicely if the opacity is < 1
-      const outerX = rtlHelper.leftForLtr(rtlColorX, boxWidth - boxPadding);
-      const innerX = rtlHelper.leftForLtr(rtlHelper.xPlus(rtlColorX, 1), boxWidth - boxPadding - 2);
-      const borderRadius = toTRBLCorners(labelColors.borderRadius);
+      const outerX = rtlHelper.leftForLtr(rtlColorX, boxWidth);
+      const innerX = rtlHelper.leftForLtr(rtlHelper.xPlus(rtlColorX, 1), boxWidth - 2);
+      const borderRadius = toTRBLCorners(labelColor.borderRadius);
 
       if (Object.values(borderRadius).some(v => v !== 0)) {
         ctx.beginPath();
@@ -731,7 +843,7 @@ export class Tooltip extends Element {
         ctx.stroke();
 
         // Inner square
-        ctx.fillStyle = labelColors.backgroundColor;
+        ctx.fillStyle = labelColor.backgroundColor;
         ctx.beginPath();
         addRoundedRectPath(ctx, {
           x: innerX,
@@ -747,7 +859,7 @@ export class Tooltip extends Element {
         ctx.fillRect(outerX, colorY, boxWidth, boxHeight);
         ctx.strokeRect(outerX, colorY, boxWidth, boxHeight);
         // Inner square
-        ctx.fillStyle = labelColors.backgroundColor;
+        ctx.fillStyle = labelColor.backgroundColor;
         ctx.fillRect(innerX, colorY + 1, boxWidth - 2, boxHeight - 2);
       }
     }
@@ -1062,10 +1174,10 @@ export class Tooltip extends Element {
   /**
 	 * Helper for determining the active elements for event
 	 * @param {ChartEvent} e - The event to handle
-	 * @param {Element[]} lastActive - Previously active elements
+	 * @param {InteractionItem[]} lastActive - Previously active elements
 	 * @param {boolean} [replay] - This is a replayed event (from update)
 	 * @param {boolean} [inChartArea] - The event is inside chartArea
-	 * @returns {Element[]} - Active elements
+	 * @returns {InteractionItem[]} - Active elements
 	 * @private
 	 */
   _getActiveElements(e, lastActive, replay, inChartArea) {
@@ -1077,7 +1189,11 @@ export class Tooltip extends Element {
 
     if (!inChartArea) {
       // Let user control the active elements outside chartArea. Eg. using Legend.
-      return lastActive;
+      // But make sure that active elements are still valid.
+      return lastActive.filter(i =>
+        this.chart.data.datasets[i.datasetIndex] &&
+        this.chart.getDatasetMeta(i.datasetIndex).controller.getParsed(i.index) !== undefined
+      );
     }
 
     // Find Active Elements for tooltips
@@ -1103,11 +1219,6 @@ export class Tooltip extends Element {
     return position !== false && (caretX !== position.x || caretY !== position.y);
   }
 }
-
-/**
- * @namespace Chart.Tooltip.positioners
- */
-Tooltip.positioners = positioners;
 
 export default {
   id: 'tooltip',
@@ -1140,7 +1251,7 @@ export default {
         tooltip
       };
 
-      if (chart.notifyPlugins('beforeTooltipDraw', args) === false) {
+      if (chart.notifyPlugins('beforeTooltipDraw', {...args, cancelable: true}) === false) {
         return;
       }
 
@@ -1210,82 +1321,7 @@ export default {
         duration: 200
       }
     },
-    callbacks: {
-      // Args are: (tooltipItems, data)
-      beforeTitle: noop,
-      title(tooltipItems) {
-        if (tooltipItems.length > 0) {
-          const item = tooltipItems[0];
-          const labels = item.chart.data.labels;
-          const labelCount = labels ? labels.length : 0;
-
-          if (this && this.options && this.options.mode === 'dataset') {
-            return item.dataset.label || '';
-          } else if (item.label) {
-            return item.label;
-          } else if (labelCount > 0 && item.dataIndex < labelCount) {
-            return labels[item.dataIndex];
-          }
-        }
-
-        return '';
-      },
-      afterTitle: noop,
-
-      // Args are: (tooltipItems, data)
-      beforeBody: noop,
-
-      // Args are: (tooltipItem, data)
-      beforeLabel: noop,
-      label(tooltipItem) {
-        if (this && this.options && this.options.mode === 'dataset') {
-          return tooltipItem.label + ': ' + tooltipItem.formattedValue || tooltipItem.formattedValue;
-        }
-
-        let label = tooltipItem.dataset.label || '';
-
-        if (label) {
-          label += ': ';
-        }
-        const value = tooltipItem.formattedValue;
-        if (!isNullOrUndef(value)) {
-          label += value;
-        }
-        return label;
-      },
-      labelColor(tooltipItem) {
-        const meta = tooltipItem.chart.getDatasetMeta(tooltipItem.datasetIndex);
-        const options = meta.controller.getStyle(tooltipItem.dataIndex);
-        return {
-          borderColor: options.borderColor,
-          backgroundColor: options.backgroundColor,
-          borderWidth: options.borderWidth,
-          borderDash: options.borderDash,
-          borderDashOffset: options.borderDashOffset,
-          borderRadius: 0,
-        };
-      },
-      labelTextColor() {
-        return this.options.bodyColor;
-      },
-      labelPointStyle(tooltipItem) {
-        const meta = tooltipItem.chart.getDatasetMeta(tooltipItem.datasetIndex);
-        const options = meta.controller.getStyle(tooltipItem.dataIndex);
-        return {
-          pointStyle: options.pointStyle,
-          rotation: options.rotation,
-        };
-      },
-      afterLabel: noop,
-
-      // Args are: (tooltipItems, data)
-      afterBody: noop,
-
-      // Args are: (tooltipItems, data)
-      beforeFooter: noop,
-      footer: noop,
-      afterFooter: noop
-    }
+    callbacks: defaultCallbacks
   },
 
   defaultRoutes: {

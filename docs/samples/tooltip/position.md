@@ -99,3 +99,10 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs 
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Line](../../charts/line.md)
+* [Tooltip](../../configuration/tooltip.md)
+  * [Position Modes](../../configuration/tooltip.md#position-modes)
+  * [Custom Position Modes](../../configuration/tooltip.md#custom-position-modes)

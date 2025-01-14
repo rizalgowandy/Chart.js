@@ -1,21 +1,21 @@
-import animator from './core.animator';
-import defaults, {overrides} from './core.defaults';
-import Interaction from './core.interaction';
-import layouts from './core.layouts';
-import {_detectPlatform} from '../platform';
-import PluginService from './core.plugins';
-import registry from './core.registry';
-import Config, {determineAxis, getIndexAxis} from './core.config';
-import {retinaScale, _isDomSupported} from '../helpers/helpers.dom';
-import {each, callback as callCallback, uid, valueOrDefault, _elementsEqual, isNullOrUndef, setsEqual, defined, isFunction, _isClickEvent} from '../helpers/helpers.core';
-import {clearCanvas, clipArea, createContext, unclipArea, _isPointInArea} from '../helpers';
+import animator from './core.animator.js';
+import defaults, {overrides} from './core.defaults.js';
+import Interaction from './core.interaction.js';
+import layouts from './core.layouts.js';
+import {_detectPlatform} from '../platform/index.js';
+import PluginService from './core.plugins.js';
+import registry from './core.registry.js';
+import Config, {determineAxis, getIndexAxis} from './core.config.js';
+import {retinaScale, _isDomSupported} from '../helpers/helpers.dom.js';
+import {each, callback as callCallback, uid, valueOrDefault, _elementsEqual, isNullOrUndef, setsEqual, defined, isFunction, _isClickEvent} from '../helpers/helpers.core.js';
+import {clearCanvas, clipArea, createContext, unclipArea, _isPointInArea} from '../helpers/index.js';
 // @ts-ignore
 import {version} from '../../package.json';
-import {debounce} from '../helpers/helpers.extras';
+import {debounce} from '../helpers/helpers.extras.js';
 
 /**
- * @typedef { import('../../types/index.esm').ChartEvent } ChartEvent
- * @typedef { import("../../types/index.esm").Point } Point
+ * @typedef { import('../types/index.js').ChartEvent } ChartEvent
+ * @typedef { import('../types/index.js').Point } Point
  */
 
 const KNOWN_POSITIONS = ['top', 'bottom', 'left', 'right', 'chartArea'];
@@ -101,7 +101,41 @@ function determineLastEvent(e, lastEvent, inChartArea, isClick) {
   return e;
 }
 
+function getSizeForArea(scale, chartArea, field) {
+  return scale.options.clip ? scale[field] : chartArea[field];
+}
+
+function getDatasetArea(meta, chartArea) {
+  const {xScale, yScale} = meta;
+  if (xScale && yScale) {
+    return {
+      left: getSizeForArea(xScale, chartArea, 'left'),
+      right: getSizeForArea(xScale, chartArea, 'right'),
+      top: getSizeForArea(yScale, chartArea, 'top'),
+      bottom: getSizeForArea(yScale, chartArea, 'bottom')
+    };
+  }
+  return chartArea;
+}
+
 class Chart {
+
+  static defaults = defaults;
+  static instances = instances;
+  static overrides = overrides;
+  static registry = registry;
+  static version = version;
+  static getChart = getChart;
+
+  static register(...items) {
+    registry.add(...items);
+    invalidatePlugins();
+  }
+
+  static unregister(...items) {
+    registry.remove(...items);
+    invalidatePlugins();
+  }
 
   // eslint-disable-next-line max-statements
   constructor(item, userConfig) {
@@ -111,7 +145,7 @@ class Chart {
     if (existingChart) {
       throw new Error(
         'Canvas is already in use. Chart with ID \'' + existingChart.id + '\'' +
-				' must be destroyed before the canvas can be reused.'
+				' must be destroyed before the canvas with ID \'' + existingChart.canvas.id + '\' can be reused.'
       );
     }
 
@@ -208,6 +242,10 @@ class Chart {
 
   set options(options) {
     this.config.options = options;
+  }
+
+  get registry() {
+    return registry;
   }
 
   /**
@@ -421,7 +459,7 @@ class Chart {
       } else {
         const ControllerClass = registry.getController(type);
         const {datasetElementType, dataElementType} = defaults.datasets[type];
-        Object.assign(ControllerClass.prototype, {
+        Object.assign(ControllerClass, {
           dataElementType: registry.getElement(dataElementType),
           datasetElementType: datasetElementType && registry.getElement(datasetElementType)
         });
@@ -679,8 +717,9 @@ class Chart {
     let i;
     if (this._resizeBeforeDraw) {
       const {width, height} = this._resizeBeforeDraw;
-      this._resize(width, height);
+      // Unset pending resize request now to avoid possible recursion within _resize
       this._resizeBeforeDraw = null;
+      this._resize(width, height);
     }
     this.clear();
 
@@ -763,7 +802,7 @@ class Chart {
     const ctx = this.ctx;
     const clip = meta._clip;
     const useClip = !clip.disabled;
-    const area = this.chartArea;
+    const area = getDatasetArea(meta, this.chartArea);
     const args = {
       meta,
       index: meta.index,
@@ -933,9 +972,6 @@ class Chart {
       this.canvas = null;
       this.ctx = null;
     }
-
-    // TODO V4: delete destroy hook and reference to it in plugin flowchart
-    this.notifyPlugins('destroy');
 
     delete instances[this.id];
 
@@ -1111,11 +1147,20 @@ class Chart {
 	 * returned value can be used, for instance, to interrupt the current action.
 	 * @param {string} hook - The name of the plugin method to call (e.g. 'beforeUpdate').
 	 * @param {Object} [args] - Extra arguments to apply to the hook call.
-   * @param {import('./core.plugins').filterCallback} [filter] - Filtering function for limiting which plugins are notified
+   * @param {import('./core.plugins.js').filterCallback} [filter] - Filtering function for limiting which plugins are notified
 	 * @returns {boolean} false if any of the plugins return false, else returns true.
 	 */
   notifyPlugins(hook, args, filter) {
     return this._plugins.notify(this, hook, args, filter);
+  }
+
+  /**
+   * Check if a plugin with the specific ID is registered and enabled
+   * @param {string} pluginId - The ID of the plugin of which to check if it is enabled
+   * @returns {boolean}
+   */
+  isPluginEnabled(pluginId) {
+    return this._plugins._cache.filter(p => p.plugin.id === pluginId).length === 1;
   }
 
   /**
@@ -1219,10 +1264,10 @@ class Chart {
 
   /**
    * @param {ChartEvent} e - The event
-   * @param {import('../../types/index.esm').ActiveElement[]} lastActive - Previously active elements
-   * @param {boolean} inChartArea - Is the envent inside chartArea
+   * @param {import('../types/index.js').ActiveElement[]} lastActive - Previously active elements
+   * @param {boolean} inChartArea - Is the event inside chartArea
    * @param {boolean} useFinalPosition - Should the evaluation be done with current or final (after animation) element positions
-   * @returns {import('../../types/index.esm').ActiveElement[]} - The active elements
+   * @returns {import('../types/index.js').ActiveElement[]} - The active elements
    * @pravate
    */
   _getActiveElements(e, lastActive, inChartArea, useFinalPosition) {
@@ -1241,50 +1286,8 @@ class Chart {
 }
 
 // @ts-ignore
-const invalidatePlugins = () => each(Chart.instances, (chart) => chart._plugins.invalidate());
-
-const enumerable = true;
-
-// These are available to both, UMD and ESM packages. Read Only!
-Object.defineProperties(Chart, {
-  defaults: {
-    enumerable,
-    value: defaults
-  },
-  instances: {
-    enumerable,
-    value: instances
-  },
-  overrides: {
-    enumerable,
-    value: overrides
-  },
-  registry: {
-    enumerable,
-    value: registry
-  },
-  version: {
-    enumerable,
-    value: version
-  },
-  getChart: {
-    enumerable,
-    value: getChart
-  },
-  register: {
-    enumerable,
-    value: (...items) => {
-      registry.add(...items);
-      invalidatePlugins();
-    }
-  },
-  unregister: {
-    enumerable,
-    value: (...items) => {
-      registry.remove(...items);
-      invalidatePlugins();
-    }
-  }
-});
+function invalidatePlugins() {
+  return each(Chart.instances, (chart) => chart._plugins.invalidate());
+}
 
 export default Chart;

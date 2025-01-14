@@ -4,37 +4,44 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   setup:
+    permissions:
+      contents: none
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.trim.outputs.version }}
     steps:
       - id: trim
-        run: echo "::set-output name=version::${TAG:1}"
+        run: echo "version=${TAG:1}" >> $GITHUB_OUTPUT
         env:
           TAG: ${{ github.event.release.tag_name }}
 
   release:
+    permissions:
+      contents: write  # for actions/upload-release-asset to upload release asset
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4.0.0
+      - uses: actions/setup-node@v4
         with:
-          node-version: '14.x'
           registry-url: https://registry.npmjs.org/
-          cache: npm
+          node-version: 16
+          cache: pnpm
       - name: Setup and build
         run: |
-          npm ci
-          npm install -g json
+          pnpm install
+          pnpm install -g json
           json -I -f package.json -e "this.version=\"$VERSION\""
-          json -I -f package-lock.json -e "this.version=\"$VERSION\""
-          npm run build
+          pnpm run build
           ./scripts/docs-config.sh "$VERSION" release
-          npm run docs
-          npm pack
+          pnpm run docs
+          pnpm pack
         env:
           VERSION: ${{ needs.setup.outputs.version }}
       - name: Publish to NPM
@@ -64,21 +71,21 @@ jobs:
     runs-on: ubuntu-latest
     if: "!github.event.release.prerelease"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4.0.0
+      - uses: actions/setup-node@v4
         with:
-          node-version: '14.x'
           registry-url: https://registry.npmjs.org/
-          cache: npm
+          node-version: 16
+          cache: pnpm
       - name: Setup and build
         run: |
-          npm ci
-          npm install -g json
+          pnpm install
+          pnpm install -g json
           json -I -f package.json -e "this.version=\"$VERSION\""
-          json -I -f package-lock.json -e "this.version=\"$VERSION\""
-          npm run build
+          pnpm run build
           ./scripts/docs-config.sh "$VERSION"
-          npm run docs
+          pnpm run docs
         env:
           VERSION: ${{ needs.setup.outputs.version }}
       - name: Deploy Docs

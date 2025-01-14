@@ -113,6 +113,14 @@ function clickHandler(evt) {
 }
 ```
 
+## .getSortedVisibleDatasetMetas()
+
+Returns an array of all the dataset meta's in the order that they are drawn on the canvas that are not hidden.
+
+```javascript
+const visibleMetas = chart.getSortedVisibleDatasetMetas();
+```
+
 ## .getDatasetMeta(index)
 
 Looks for the dataset that matches the current index and returns that metadata. This returned data has all of the metadata that is used to construct the chart.
@@ -124,6 +132,14 @@ Extensive examples of usage are available in the [Chart.js tests](https://github
 ```javascript
 const meta = myChart.getDatasetMeta(0);
 const x = meta.data[0].x;
+```
+
+## getVisibleDatasetCount
+
+Returns the number of datasets that are currently not hidden.
+
+```javascript
+const numberOfVisibleDatasets = chart.getVisibleDatasetCount();
 ```
 
 ## setDatasetVisibility(datasetIndex, visibility)
@@ -146,7 +162,7 @@ chart.update(); // chart now renders with item hidden
 
 ## getDataVisibility(index)
 
-Returns the stored visibility state of an data index for all datasets. Set by [toggleDataVisibility](#toggleDataVisibility). A dataset controller should use this method to determine if an item should not be visible.
+Returns the stored visibility state of a data index for all datasets. Set by [toggleDataVisibility](#toggleDataVisibility). A dataset controller should use this method to determine if an item should not be visible.
 
 ```javascript
 const visible = chart.getDataVisibility(2);
@@ -184,6 +200,14 @@ chart.setActiveElements([
 ]);
 ```
 
+## isPluginEnabled(pluginId)
+
+Returns a boolean if a plugin with the given ID has been registered to the chart instance.
+
+```javascript
+chart.isPluginEnabled('filler');
+```
+
 ## Static: getChart(key)
 
 Finds the chart instance from the given key. If the key is a `string`, it is interpreted as the ID of the Canvas node for the Chart. The key can also be a `CanvasRenderingContext2D` or an `HTMLDOMElement`. This will return `undefined` if no Chart is found. To be found, the chart must have previously been created.
@@ -191,3 +215,17 @@ Finds the chart instance from the given key. If the key is a `string`, it is int
 ```javascript
 const chart = Chart.getChart("canvas-id");
 ```
+
+## Static: register(chartComponentLike)
+
+Used to register plugins, axis types or chart types globally to all your charts.
+
+```javascript
+import { Chart, Tooltip, LinearScale, PointElement, BubbleController } from 'chart.js';
+
+Chart.register(Tooltip, LinearScale, PointElement, BubbleController);
+```
+
+## Static: unregister(chartComponentLike)
+
+Used to unregister plugins, axis types or chart types globally from all your charts.

@@ -61,3 +61,9 @@ const config = {
 module.exports = {
   config: config,
 };
+```
+
+## Docs
+* [Line](../../charts/line.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Plugins](../../developers/plugins.md)

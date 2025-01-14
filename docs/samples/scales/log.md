@@ -74,3 +74,9 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Line](../../charts/line.md)
+* [Logarithmic Axis](../../axes/cartesian/logarithmic.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+

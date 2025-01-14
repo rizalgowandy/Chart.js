@@ -13,6 +13,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -35,6 +36,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -68,6 +70,27 @@ describe('Arc element tests', function() {
       options: {
         spacing: 10,
         offset: 0,
+        borderWidth: 0
+      }
+    });
+
+    expect(arc.inRange(7, 0)).toBe(false);
+    expect(arc.inRange(15, 0)).toBe(true);
+  });
+
+  it ('should include borderWidth for in range check', function() {
+    // Mock out the arc as if the controller put it there
+    var arc = new Chart.elements.ArcElement({
+      startAngle: 0,
+      endAngle: Math.PI / 2,
+      x: 0,
+      y: 0,
+      innerRadius: 5,
+      outerRadius: 10,
+      options: {
+        spacing: 0,
+        offset: 0,
+        borderWidth: 10
       }
     });
 
@@ -88,6 +111,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -106,6 +130,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -126,6 +151,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -146,6 +172,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 10,
         offset: 10,
+        borderWidth: 0
       }
     });
 
@@ -166,6 +193,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -194,6 +222,7 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
@@ -211,11 +240,67 @@ describe('Arc element tests', function() {
       options: {
         spacing: 0,
         offset: 0,
+        borderWidth: 0
       }
     });
 
     arc.draw(ctx);
 
     expect(ctx.getCalls().length).toBe(0);
+  });
+
+  it('should draw when circular: false', function() {
+    var arc = new Chart.elements.ArcElement({
+      startAngle: 0,
+      endAngle: Math.PI * 2,
+      x: 2,
+      y: 2,
+      innerRadius: 0,
+      outerRadius: 2,
+      options: {
+        spacing: 0,
+        offset: 0,
+        borderWidth: 0,
+        scales: {
+          r: {
+            grid: {
+              circular: false,
+            },
+          },
+        },
+        elements: {
+          arc: {
+            circular: false
+          },
+        },
+      }
+    });
+
+    var ctx = window.createMockContext();
+    arc.draw(ctx);
+
+    expect(ctx.getCalls().length).toBeGreaterThan(0);
+  });
+
+  it ('should determine not in range when angle 0', function() {
+    // Mock out the arc as if the controller put it there
+    var arc = new Chart.elements.ArcElement({
+      startAngle: 0,
+      endAngle: 0,
+      x: 0,
+      y: 0,
+      innerRadius: 0,
+      outerRadius: 10,
+      circumference: 0,
+      options: {
+        spacing: 0,
+        offset: 0,
+        borderWidth: 0
+      }
+    });
+
+    var center = arc.getCenterPoint();
+
+    expect(arc.inRange(center.x, 1)).toBe(false);
   });
 });

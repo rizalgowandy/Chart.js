@@ -106,7 +106,7 @@ const config = {
     },
     hover: {
       mode: 'index',
-      intersec: false
+      intersect: false
     },
     scales: {
       x: {
@@ -137,3 +137,12 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Line](../../charts/line.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Axes scales](../../axes/)
+  * [Common options to all axes (`min`,`max`)](../../axes/#common-options-to-all-axes)
+* [Linear Axis](../../axes/cartesian/linear.md)
+  * [Linear Axis specific tick options (`stepSize`)](../../axes/cartesian/linear.md#linear-axis-specific-tick-options)
+  * [Step Size](../../axes/cartesian/linear.md#step-size)

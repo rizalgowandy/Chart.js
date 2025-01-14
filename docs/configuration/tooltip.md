@@ -5,7 +5,7 @@
 Namespace: `options.plugins.tooltip`, the global options for the chart tooltips is defined in `Chart.defaults.plugins.tooltip`.
 
 :::warning
-The bubble, doughnut, pie, polar area, and scatter charts override the tooltip defaults. To change the overrides for those chart types, the options are defined in `Chart.overrides[type].plugins.tooltip`.
+The `titleFont`, `bodyFont` and `footerFont` options default to the `Chart.defaults.font` options. To change the overrides for those options, you will need to pass a function that returns a font object. See section about [overriding default fonts](#default-font-overrides) for extra information below.
 :::
 
 | Name | Type | Default | Description
@@ -46,9 +46,13 @@ The bubble, doughnut, pie, polar area, and scatter charts override the tooltip d
 | `borderColor` | [`Color`](../general/colors.md) | `'rgba(0, 0, 0, 0)'` | Color of the border.
 | `borderWidth` | `number` | `0` | Size of the border.
 | `rtl` | `boolean` | | `true` for rendering the tooltip from right to left.
-| `textDirection` | `string` | canvas' default | This will force the text direction `'rtl' or 'ltr` on the canvas for rendering the tooltips, regardless of the css specified on the canvas
+| `textDirection` | `string` | canvas' default | This will force the text direction `'rtl'` or `'ltr'` on the canvas for rendering the tooltips, regardless of the css specified on the canvas
 | `xAlign` | `string` | `undefined` | Position of the tooltip caret in the X direction. [more](#tooltip-alignment)
 | `yAlign` | `string` | `undefined` | Position of the tooltip caret in the Y direction. [more](#tooltip-alignment)
+
+:::tip Note
+If you need more visual customizations, please use an [HTML tooltip](../samples/tooltip/html.md).
+:::
 
 ### Position Modes
 
@@ -97,7 +101,7 @@ Allows filtering of [tooltip items](#tooltip-item-context). Must implement at mi
 
 ## Tooltip Callbacks
 
-Namespace: `options.plugins.tooltip.callbacks`, the tooltip has the following callbacks for providing text. For all functions, `this` will be the tooltip object created from the `Tooltip` constructor.
+Namespace: `options.plugins.tooltip.callbacks`, the tooltip has the following callbacks for providing text. For all functions, `this` will be the tooltip object created from the `Tooltip` constructor. If the callback returns `undefined`, then the default callback will be used. To remove things from the tooltip callback should return an empty string.
 
 Namespace: `data.datasets[].tooltip.callbacks`, items marked with `Yes` in the column `Dataset override` can be overridden per dataset.
 
@@ -105,20 +109,20 @@ A [tooltip item context](#tooltip-item-context) is generated for each item that 
 
 | Name | Arguments | Return Type | Dataset override | Description
 | ---- | --------- | ----------- | ---------------- | -----------
-| `beforeTitle` | `TooltipItem[]` | `string | string[]` | | Returns the text to render before the title.
-| `title` | `TooltipItem[]` | `string | string[]` | | Returns text to render as the title of the tooltip.
-| `afterTitle` | `TooltipItem[]` | `string | string[]` | | Returns text to render after the title.
-| `beforeBody` | `TooltipItem[]` | `string | string[]` | | Returns text to render before the body section.
-| `beforeLabel` | `TooltipItem` | `string | string[]` | Yes | Returns text to render before an individual label. This will be called for each item in the tooltip.
-| `label` | `TooltipItem` | `string | string[]` | Yes | Returns text to render for an individual item in the tooltip. [more...](#label-callback)
-| `labelColor` | `TooltipItem` | `object` | Yes | Returns the colors to render for the tooltip item. [more...](#label-color-callback)
-| `labelTextColor` | `TooltipItem` | `Color` | Yes | Returns the colors for the text of the label for the tooltip item.
-| `labelPointStyle` | `TooltipItem` | `object` | Yes | Returns the point style to use instead of color boxes if usePointStyle is true (object with values `pointStyle` and `rotation`). Default implementation uses the point style from the dataset points. [more...](#label-point-style-callback)
-| `afterLabel` | `TooltipItem` | `string | string[]` | Yes | Returns text to render after an individual label.
-| `afterBody` | `TooltipItem[]` | `string | string[]` | | Returns text to render after the body section.
-| `beforeFooter` | `TooltipItem[]` | `string | string[]` | | Returns text to render before the footer section.
-| `footer` | `TooltipItem[]` | `string | string[]` | | Returns text to render as the footer of the tooltip.
-| `afterFooter` | `TooltipItem[]` | `string | string[]` | | Text to render after the footer section.
+| `beforeTitle` | `TooltipItem[]` | `string | string[] | undefined` | | Returns the text to render before the title.
+| `title` | `TooltipItem[]` | `string | string[] | undefined` | | Returns text to render as the title of the tooltip.
+| `afterTitle` | `TooltipItem[]` | `string | string[] | undefined` | | Returns text to render after the title.
+| `beforeBody` | `TooltipItem[]` | `string | string[] | undefined` | | Returns text to render before the body section.
+| `beforeLabel` | `TooltipItem` | `string | string[] | undefined` | Yes | Returns text to render before an individual label. This will be called for each item in the tooltip.
+| `label` | `TooltipItem` | `string | string[] | undefined` | Yes | Returns text to render for an individual item in the tooltip. [more...](#label-callback)
+| `labelColor` | `TooltipItem` | `object | undefined` | Yes | Returns the colors to render for the tooltip item. [more...](#label-color-callback)
+| `labelTextColor` | `TooltipItem` | `Color | undefined` | Yes | Returns the colors for the text of the label for the tooltip item.
+| `labelPointStyle` | `TooltipItem` | `object | undefined` | Yes | Returns the point style to use instead of color boxes if usePointStyle is true (object with values `pointStyle` and `rotation`). Default implementation uses the point style from the dataset points. [more...](#label-point-style-callback)
+| `afterLabel` | `TooltipItem` | `string | string[] | undefined` | Yes | Returns text to render after an individual label.
+| `afterBody` | `TooltipItem[]` | `string | string[] | undefined` | | Returns text to render after the body section.
+| `beforeFooter` | `TooltipItem[]` | `string | string[] | undefined` | | Returns text to render before the footer section.
+| `footer` | `TooltipItem[]` | `string | string[] | undefined` | | Returns text to render as the footer of the tooltip.
+| `afterFooter` | `TooltipItem[]` | `string | string[] | undefined` | | Text to render after the footer section.
 
 ### Label Callback
 
@@ -183,7 +187,7 @@ const chart = new Chart(ctx, {
 
 ### Label Point Style Callback
 
-For example, to draw triangles instead of the regular color box for each item in the tooltip you could do:
+For example, to draw triangles instead of the regular color box for each item in the tooltip, you could do:
 
 ```javascript
 const chart = new Chart(ctx, {
@@ -304,8 +308,8 @@ const myPieChart = new Chart(ctx, {
                             let style = 'background:' + colors.backgroundColor;
                             style += '; border-color:' + colors.borderColor;
                             style += '; border-width: 2px';
-                            const span = '<span style="' + style + '"></span>';
-                            innerHtml += '<tr><td>' + span + body + '</td></tr>';
+                            const span = '<span style="' + style + '">' + body + '</span>';
+                            innerHtml += '<tr><td>' + span + '</td></tr>';
                         });
                         innerHtml += '</tbody>';
 
@@ -377,9 +381,10 @@ The tooltip model contains parameters that can be used to render the tooltip.
     // lines of text that form the footer
     footer: string[],
 
-    // colors to render for each item in body[]. This is the color of the squares in the tooltip
-    labelColors: Color[],
+    // style to render for each item in body[]. This is the style of the squares in the tooltip
+    labelColors: TooltipLabelStyle[],
     labelTextColors: Color[],
+    labelPointStyles: { pointStyle: PointStyle; rotation: number }[],
 
     // 0 opacity is a hidden tooltip
     opacity: number,
@@ -419,7 +424,7 @@ Tooltip.positioners.myCustomPositioner = function(elements, eventPosition) {
 };
 
 // Then, to use it...
-new Chart.js(ctx, {
+new Chart(ctx, {
     data,
     options: {
         plugins: {
@@ -441,4 +446,16 @@ declare module 'chart.js' {
     myCustomPositioner: TooltipPositionerFunction<ChartType>;
   }
 }
+```
+
+## Default font overrides
+
+By default, the `titleFont`, `bodyFont` and `footerFont` listen to the `Chart.defaults.font` options for setting its values.
+Overriding these normally by accessing the object won't work because it is backed by a get function that looks to the default `font` namespace.
+So you will need to override this get function with your own function that returns the desired config.
+
+Example:
+
+```javascript
+Chart.defaults.plugins.tooltip.titleFont = () => ({ size: 20, lineHeight: 1.2, weight: 800 });
 ```

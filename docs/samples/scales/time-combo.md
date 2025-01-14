@@ -66,9 +66,12 @@ const config = {
         type: 'time',
         display: true,
         offset: true,
+        ticks: {
+          source: 'data'
+        },
         time: {
           unit: 'day'
-        }
+        },
       },
     },
   },
@@ -80,3 +83,9 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Bar](../../charts/bar.md)
+* [Line](../../charts/line.md)
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Time Scale](../../axes/cartesian/time.md)

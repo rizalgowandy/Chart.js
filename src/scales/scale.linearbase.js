@@ -1,7 +1,7 @@
-import {isNullOrUndef} from '../helpers/helpers.core';
-import {almostEquals, almostWhole, niceNum, _decimalPlaces, _setMinAndMaxByKey, sign, toRadians} from '../helpers/helpers.math';
-import Scale from '../core/core.scale';
-import {formatNumber} from '../helpers/helpers.intl';
+import {isNullOrUndef} from '../helpers/helpers.core.js';
+import {almostEquals, almostWhole, niceNum, _decimalPlaces, _setMinAndMaxByKey, sign, toRadians} from '../helpers/helpers.math.js';
+import Scale from '../core/core.scale.js';
+import {formatNumber} from '../helpers/helpers.intl.js';
 
 /**
  * Generate a set of linear ticks for an axis
@@ -123,7 +123,11 @@ function generateTicks(generationOptions, dataRange) {
   }
 
   for (; j < numSpaces; ++j) {
-    ticks.push({value: Math.round((niceMin + j * spacing) * factor) / factor});
+    const tickValue = Math.round((niceMin + j * spacing) * factor) / factor;
+    if (maxDefined && tickValue > max) {
+      break;
+    }
+    ticks.push({value: tickValue});
   }
 
   if (maxDefined && includeBounds && niceMax !== max) {
@@ -194,15 +198,7 @@ export default class LinearScaleBase extends Scale {
     }
 
     if (min === max) {
-      let offset = 1;
-      if (max >= Number.MAX_SAFE_INTEGER || min <= Number.MIN_SAFE_INTEGER) {
-        // In this case, the magnitude of the number is so large that
-        // max === max + 1 due to how IEEE754 doubles work. We need to increase
-        // the range by a larger number. Let's be safe and make this 5% of the number
-        //
-        // TODO - V4, make this the new default behaviour and eliminate +1 in other cases
-        offset = Math.abs(max * 0.05);
-      }
+      let offset = max === 0 ? 1 : Math.abs(max * 0.05);
 
       setMax(max + offset);
 

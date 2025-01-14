@@ -78,3 +78,12 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs 
+* [Data structures (`labels`)](../../general/data-structures.md)
+* [Line](../../charts/line.md)
+* [Tooltip](../../configuration/tooltip.md)
+  * `usePointStyle`
+* [Elements](../../configuration/elements.md)
+  * [Point Styles](../../configuration/elements.md#point-styles)
+

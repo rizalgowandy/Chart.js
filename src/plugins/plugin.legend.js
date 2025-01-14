@@ -1,16 +1,24 @@
-import defaults from '../core/core.defaults';
-import Element from '../core/core.element';
-import layouts from '../core/core.layouts';
-import {addRoundedRectPath, drawPoint, renderText} from '../helpers/helpers.canvas';
+import defaults from '../core/core.defaults.js';
+import Element from '../core/core.element.js';
+import layouts from '../core/core.layouts.js';
+import {addRoundedRectPath, drawPointLegend, renderText} from '../helpers/helpers.canvas.js';
 import {
-  callback as call, valueOrDefault, toFont,
-  toPadding, getRtlAdapter, overrideTextDirection, restoreTextDirection,
-  clipArea, unclipArea, _isBetween
-} from '../helpers/index';
-import {_toLeftRightCenter, _alignStartEnd, _textX} from '../helpers/helpers.extras';
-import {toTRBLCorners} from '../helpers/helpers.options';
+  _isBetween,
+  callback as call,
+  clipArea,
+  getRtlAdapter,
+  overrideTextDirection,
+  restoreTextDirection,
+  toFont,
+  toPadding,
+  unclipArea,
+  valueOrDefault,
+} from '../helpers/index.js';
+import {_alignStartEnd, _textX, _toLeftRightCenter} from '../helpers/helpers.extras.js';
+import {toTRBLCorners} from '../helpers/helpers.options.js';
+
 /**
- * @typedef { import("../../types/index.esm").ChartEvent } ChartEvent
+ * @typedef { import('../types/index.js').ChartEvent } ChartEvent
  */
 
 const getBoxSize = (labelOpts, fontSize) => {
@@ -18,7 +26,7 @@ const getBoxSize = (labelOpts, fontSize) => {
 
   if (labelOpts.usePointStyle) {
     boxHeight = Math.min(boxHeight, fontSize);
-    boxWidth = Math.min(boxWidth, fontSize);
+    boxWidth = labelOpts.pointStyleWidth || Math.min(boxWidth, fontSize);
   }
 
   return {
@@ -139,7 +147,7 @@ export class Legend extends Element {
       height = this._fitRows(titleHeight, fontSize, boxWidth, itemHeight) + 10;
     } else {
       height = this.maxHeight; // fill all the height
-      width = this._fitCols(titleHeight, fontSize, boxWidth, itemHeight) + 10;
+      width = this._fitCols(titleHeight, labelFont, boxWidth, itemHeight) + 10;
     }
 
     this.width = Math.min(width, options.maxWidth || this.maxWidth);
@@ -180,7 +188,7 @@ export class Legend extends Element {
     return totalHeight;
   }
 
-  _fitCols(titleHeight, fontSize, boxWidth, itemHeight) {
+  _fitCols(titleHeight, labelFont, boxWidth, _itemHeight) {
     const {ctx, maxHeight, options: {labels: {padding}}} = this;
     const hitboxes = this.legendHitBoxes = [];
     const columnSizes = this.columnSizes = [];
@@ -194,7 +202,7 @@ export class Legend extends Element {
     let col = 0;
 
     this.legendItems.forEach((legendItem, i) => {
-      const itemWidth = boxWidth + (fontSize / 2) + ctx.measureText(legendItem.text).width;
+      const {itemWidth, itemHeight} = calculateItemSize(boxWidth, labelFont, ctx, legendItem, _itemHeight);
 
       // If too tall, go to new column
       if (i > 0 && currentColHeight + itemHeight + 2 * padding > heightLimit) {
@@ -278,7 +286,7 @@ export class Legend extends Element {
     const defaultColor = defaults.color;
     const rtlHelper = getRtlAdapter(opts.rtl, this.left, this.width);
     const labelFont = toFont(labelOpts.font);
-    const {color: fontColor, padding} = labelOpts;
+    const {padding} = labelOpts;
     const fontSize = labelFont.size;
     const halfFontSize = fontSize / 2;
     let cursor;
@@ -316,7 +324,7 @@ export class Legend extends Element {
         // Recalculate x and y for drawPoint() because its expecting
         // x and y to be center of figure (instead of top left)
         const drawOptions = {
-          radius: boxWidth * Math.SQRT2 / 2,
+          radius: boxHeight * Math.SQRT2 / 2,
           pointStyle: legendItem.pointStyle,
           rotation: legendItem.rotation,
           borderWidth: lineWidth
@@ -325,7 +333,7 @@ export class Legend extends Element {
         const centerY = y + halfFontSize;
 
         // Draw pointStyle as legend symbol
-        drawPoint(ctx, drawOptions, centerX, centerY);
+        drawPointLegend(ctx, drawOptions, centerX, centerY, labelOpts.pointStyleWidth && boxWidth);
       } else {
         // Draw box as legend symbol
         // Adjust position when boxHeight < fontSize (want it centered)
@@ -384,9 +392,8 @@ export class Legend extends Element {
 
     const lineHeight = itemHeight + padding;
     this.legendItems.forEach((legendItem, i) => {
-      // TODO: Remove fallbacks at v4
-      ctx.strokeStyle = legendItem.fontColor || fontColor; // for strikethrough effect
-      ctx.fillStyle = legendItem.fontColor || fontColor; // render in correct colour
+      ctx.strokeStyle = legendItem.fontColor; // for strikethrough effect
+      ctx.fillStyle = legendItem.fontColor; // render in correct colour
 
       const textWidth = ctx.measureText(legendItem.text).width;
       const textAlign = rtlHelper.textAlign(legendItem.textAlign || (legendItem.textAlign = labelOpts.textAlign));
@@ -419,6 +426,9 @@ export class Legend extends Element {
 
       if (isHorizontal) {
         cursor.x += width + padding;
+      } else if (typeof legendItem.text !== 'string') {
+        const fontLineHeight = labelFont.lineHeight;
+        cursor.y += calculateLegendItemHeight(legendItem, fontLineHeight) + padding;
       } else {
         cursor.y += lineHeight;
       }
@@ -542,6 +552,33 @@ export class Legend extends Element {
   }
 }
 
+function calculateItemSize(boxWidth, labelFont, ctx, legendItem, _itemHeight) {
+  const itemWidth = calculateItemWidth(legendItem, boxWidth, labelFont, ctx);
+  const itemHeight = calculateItemHeight(_itemHeight, legendItem, labelFont.lineHeight);
+  return {itemWidth, itemHeight};
+}
+
+function calculateItemWidth(legendItem, boxWidth, labelFont, ctx) {
+  let legendItemText = legendItem.text;
+  if (legendItemText && typeof legendItemText !== 'string') {
+    legendItemText = legendItemText.reduce((a, b) => a.length > b.length ? a : b);
+  }
+  return boxWidth + (labelFont.size / 2) + ctx.measureText(legendItemText).width;
+}
+
+function calculateItemHeight(_itemHeight, legendItem, fontLineHeight) {
+  let itemHeight = _itemHeight;
+  if (typeof legendItem.text !== 'string') {
+    itemHeight = calculateLegendItemHeight(legendItem, fontLineHeight);
+  }
+  return itemHeight;
+}
+
+function calculateLegendItemHeight(legendItem, fontLineHeight) {
+  const labelHeight = legendItem.text ? legendItem.text.length : 0;
+  return fontLineHeight * labelHeight;
+}
+
 function isListened(type, opts) {
   if ((type === 'mousemove' || type === 'mouseout') && (opts.onHover || opts.onLeave)) {
     return true;
@@ -637,7 +674,7 @@ export default {
       // lineWidth :
       generateLabels(chart) {
         const datasets = chart.data.datasets;
-        const {labels: {usePointStyle, pointStyle, textAlign, color}} = chart.legend.options;
+        const {labels: {usePointStyle, pointStyle, textAlign, color, useBorderRadius, borderRadius}} = chart.legend.options;
 
         return chart._getSortedDatasetMetas().map((meta) => {
           const style = meta.controller.getStyle(usePointStyle ? 0 : undefined);
@@ -657,7 +694,7 @@ export default {
             pointStyle: pointStyle || style.pointStyle,
             rotation: style.rotation,
             textAlign: textAlign || style.textAlign,
-            borderRadius: 0, // TODO: v4, default to style.borderRadius
+            borderRadius: useBorderRadius && (borderRadius || style.borderRadius),
 
             // Below is extra data used for toggling the datasets
             datasetIndex: meta.index

@@ -110,3 +110,7 @@ module.exports = {
   config: config,
 };
 ```
+
+## Docs
+* [Line](../../charts/line.md)
+* [Time Cartesian Axis](../../axes/cartesian/time.md)

@@ -89,3 +89,11 @@ module.exports = {
   config,
 };
 ```
+
+## Docs
+* [Line](../../charts/line.md)
+  * [Point Styling](../../charts/line.md#point-styling)
+* [Options](../../general/options.md)
+  * [Scriptable Options](../../general/options.md#scriptable-options)
+* [Data structures (`labels`)](../../general/data-structures.md)
+

@@ -33,12 +33,12 @@ const data = {
 // <block:plugin:2>
 // Note: changes to the plugin code is not reflected to the chart, because the plugin is loaded at chart construction time and editor changes only trigger an chart.update().
 const plugin = {
-  id: 'custom_canvas_background_color',
-  beforeDraw: (chart) => {
-    const ctx = chart.canvas.getContext('2d');
+  id: 'customCanvasBackgroundColor',
+  beforeDraw: (chart, args, options) => {
+    const {ctx} = chart;
     ctx.save();
     ctx.globalCompositeOperation = 'destination-over';
-    ctx.fillStyle = 'lightGreen';
+    ctx.fillStyle = options.color || '#99ffff';
     ctx.fillRect(0, 0, chart.width, chart.height);
     ctx.restore();
   }
@@ -49,6 +49,13 @@ const plugin = {
 const config = {
   type: 'doughnut',
   data: data,
+  options: {
+    plugins: {
+      customCanvasBackgroundColor: {
+        color: 'lightGreen',
+      }
+    }
+  },
   plugins: [plugin],
 };
 // </block:config>
@@ -90,7 +97,7 @@ const image = new Image();
 image.src = 'https://www.chartjs.org/img/chartjs-logo.svg';
 
 const plugin = {
-  id: 'custom_canvas_background_image',
+  id: 'customCanvasBackgroundImage',
   beforeDraw: (chart) => {
     if (image.complete) {
       const ctx = chart.ctx;
